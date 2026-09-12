@@ -31,6 +31,6 @@
     "lint-staged": "^17.5.1",
     "oxlint": "^1.82.0",
     "typescript": "^5.8.0",
-    "vitest": "^3.1.0"
+    "vitest": "^5.0.0"
   }
 }
