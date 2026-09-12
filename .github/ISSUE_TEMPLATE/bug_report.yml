@@ -1,0 +1,67 @@
+name: Bug report
+description: Report a reproducible problem with the plugin.
+title: "bug: "
+labels:
+  - bug
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Do not include Langfuse keys, prompts, transcripts, or private Hook payloads.
+        Redact logs before attaching them.
+  - type: input
+    id: version
+    attributes:
+      label: Plugin version
+      description: The installed plugin version and marketplace source.
+      placeholder: "0.1.0 from zcode-langfuse-community"
+    validations:
+      required: true
+  - type: input
+    id: zcode-version
+    attributes:
+      label: ZCode version
+      placeholder: "e.g. 1.2.3"
+    validations:
+      required: true
+  - type: input
+    id: node-version
+    attributes:
+      label: Node.js version
+      placeholder: "node --version"
+    validations:
+      required: true
+  - type: textarea
+    id: steps
+    attributes:
+      label: Steps to reproduce
+      description: Include the Hook event and the smallest safe test prompt.
+    validations:
+      required: true
+  - type: textarea
+    id: expected
+    attributes:
+      label: Expected behavior
+    validations:
+      required: true
+  - type: textarea
+    id: actual
+    attributes:
+      label: Actual behavior
+    validations:
+      required: true
+  - type: textarea
+    id: logs
+    attributes:
+      label: Redacted diagnostics
+      description: Paste only redacted ZCode diagnostics or test output.
+      render: text
+  - type: checkboxes
+    id: checks
+    attributes:
+      label: Pre-submission checks
+      options:
+        - label: I removed credentials and private user data.
+          required: true
+        - label: I searched existing issues for duplicates.
+          required: true

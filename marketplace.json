@@ -1,0 +1,20 @@
+{
+  "name": "zcode-langfuse-community",
+  "description": "Community ZCode plugins for Langfuse observability.",
+  "plugins": [
+    {
+      "name": "langfuse-observability",
+      "source": ".",
+      "description": "Fail-open Langfuse tracing for ZCode sessions and tool calls.",
+      "version": "0.1.0",
+      "category": "observability",
+      "tags": [
+        "langfuse",
+        "tracing",
+        "telemetry",
+        "hooks"
+      ],
+      "strict": true
+    }
+  ]
+}

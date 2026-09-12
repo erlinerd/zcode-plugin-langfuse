@@ -1,0 +1,183 @@
+# Langfuse Observability for ZCode
+
+[English](README.md) · [简体中文](README.zh-CN.md)
+
+A community ZCode plugin that sends one Langfuse trace per completed ZCode turn.
+It is designed for review and possible inclusion in the ZCode official plugin
+marketplace.
+
+> **Status:** early community contribution (`0.1.0`). The plugin is fail-open:
+> a missing credential, malformed hook payload, local state error, or Langfuse
+> request error must never block a ZCode session.
+
+## What it records
+
+The plugin listens to ZCode's process-hook events:
+
+- `SessionStart`
+- `UserPromptSubmit`
+- `PreToolUse`
+- `PostToolUse`
+- `PostToolUseFailure`
+- `Stop`
+
+At `Stop`, it emits a trace named `ZCode Turn` containing:
+
+- the ZCode session ID;
+- the user prompt and final assistant message, when prompt capture is enabled;
+- tool calls as Langfuse spans, including names and optional input/output;
+- an assistant response generation;
+- release, environment, turn ID, and tool-count metadata.
+
+It does **not** read the transcript file or collect hidden chain-of-thought. It
+only uses fields delivered in the ZCode hook payload.
+
+## Architecture
+
+```text
+ZCode hook stdin
+      │ one JSON object
+      ▼
+ hooks/entry.mjs ──► TurnTracker ──► JsonStateStore
+                         │                  │
+                         │                  └─ per-session, atomic, hashed filename
+                         ▼
+                  LangfuseTraceSink ──► bundled official `langfuse` SDK
+                                              │
+                                              ▼
+                                      Langfuse ingestion API
+```
+
+The source is deliberately split into deep modules:
+
+- `src/domain/` — hook and trace data types plus payload extraction;
+- `src/application/` — configuration and the turn state machine;
+- `src/adapters/` — the filesystem state adapter and Langfuse SDK adapter;
+- `src/hooks/` — the small process entry point and fail-open policy.
+
+The distributable `dist/hooks/entry.mjs` bundles the official JavaScript SDK, so
+an installed plugin does not need a separate `npm install` at runtime.
+
+## Configuration
+
+The plugin reads ZCode `userConfig` values using the standard ZCode environment
+mapping. For example, the manifest key `langfuse_public_key` becomes:
+
+```text
+ZCODE_USER_CONFIG_LANGFUSE_PUBLIC_KEY
+```
+
+The following ordinary environment variables are also accepted, which is useful
+for local smoke tests and managed deployments:
+
+```text
+LANGFUSE_PUBLIC_KEY
+LANGFUSE_SECRET_KEY
+LANGFUSE_BASE_URL
+LANGFUSE_USER_ID
+LANGFUSE_ENVIRONMENT
+LANGFUSE_RELEASE
+LANGFUSE_ENABLED
+LANGFUSE_CAPTURE_PROMPTS
+LANGFUSE_CAPTURE_TOOL_INPUTS
+LANGFUSE_CAPTURE_TOOL_OUTPUTS
+LANGFUSE_MAX_CAPTURE_CHARS
+LANGFUSE_DEBUG
+```
+
+`LANGFUSE_BASE_URL` defaults to `https://cloud.langfuse.com`. Set it to your
+self-hosted URL, for example `https://langfuse.example.com`.
+
+For a self-hosted project, configure the public and secret keys in the plugin
+configuration. The hook reads its own persisted `plugins.options` entry using
+`ZCODE_PLUGIN_ID`; this is needed because current ZCode runtimes do not inject
+all `userConfig` values into process-hook environment variables. Standard
+`LANGFUSE_*` environment variables override stored options. Never commit
+credentials or put them in `hooks/hooks.json`.
+
+### Privacy controls
+
+All capture controls default to `true` for useful traces. Set any of these to
+`false` to keep the corresponding content out of both the Langfuse request and
+local per-session state:
+
+```text
+LANGFUSE_CAPTURE_PROMPTS=false
+LANGFUSE_CAPTURE_TOOL_INPUTS=false
+LANGFUSE_CAPTURE_TOOL_OUTPUTS=false
+```
+
+Every captured field is bounded by `LANGFUSE_MAX_CAPTURE_CHARS` (default
+`20000`). Metadata-only mode still reports timing/session/tool-count structure,
+but not prompt, response, tool input, tool output, or error text.
+
+## Development
+
+Requirements: Node.js 20 or newer.
+
+```bash
+npm ci
+npm run check
+npm run package:plugin
+```
+
+`npm run build` creates the local `dist/` bundle. `npm run package:plugin` then
+creates the ignored release files:
+
+```text
+artifacts/plugin.zip
+artifacts/plugin.zip.sha256
+```
+
+The ZIP contains the ZCode manifests, Hook declaration, bundled SDK, and source
+map required by the runtime. Neither `dist/` nor `artifacts/` is committed.
+
+The hook can be smoke-tested without credentials:
+
+```bash
+printf '%s\n' '{"hook_event_name":"Stop","session_id":"smoke","last_assistant_message":"ok"}' \
+  | ZCODE_PLUGIN_DATA="$(mktemp -d)" \
+    LANGFUSE_DEBUG=true \
+    node dist/hooks/entry.mjs
+```
+
+Expected stdout is one empty hook result object:
+
+```json
+{}
+```
+
+Diagnostics, when enabled, go to stderr. They never contain keys or full
+prompts.
+
+## Local installation for testing
+
+ZCode treats a selected directory as a **plugin marketplace**, so this repository
+includes `marketplace.json` at its root. Build first, then use **Settings →
+Plugins → Add marketplace → Select directory** and choose this repository.
+Install `langfuse-observability` from the resulting personal marketplace, enable
+it, and configure its `userConfig` values.
+
+The plugin manifest is at `.zcode-plugin/plugin.json`; the hook declaration is
+at `hooks/hooks.json`.
+
+Before submitting a marketplace change, verify:
+
+1. `npm run check` passes;
+2. `npm run package:plugin` creates and validates the release ZIP;
+3. `hooks/hooks.json` contains no unsupported hook events;
+4. no credentials are present in the repository, package, or logs;
+5. disabling prompt/tool capture behaves as documented.
+
+## Project policies
+
+- [Agent instructions](AGENTS.md)
+- [Contributing](CONTRIBUTING.md)
+- [Code of Conduct](CODE_OF_CONDUCT.md)
+- [Security policy](SECURITY.md)
+- [Release checklist](docs/releasing.md)
+- [Design notes](DESIGN.md)
+
+## License
+
+MIT. See [LICENSE](LICENSE).

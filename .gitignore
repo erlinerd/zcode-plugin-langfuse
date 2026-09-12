@@ -1,0 +1,69 @@
+# Operating system files
+.DS_Store
+.AppleDouble
+.LSOverride
+Thumbs.db
+Desktop.ini
+
+# Editors and local IDE state
+.idea/
+*.swp
+*.swo
+*.swn
+*.sublime-workspace
+.history/
+
+# Node.js package managers and dependencies
+node_modules/
+.npm/
+.pnpm-store/
+.yarn/
+.yarn-cache/
+.yarn-integrity
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+pnpm-debug.log*
+
+# Local credentials and environment files
+.env
+.env.*
+!.env.example
+*.local
+.secrets/
+*.pem
+
+# Logs, reports, coverage, and temporary files
+*.log
+*.pid
+*.pid.lock
+*.seed
+coverage/
+.nyc_output/
+playwright-report/
+test-results/
+.tmp/
+.temp/
+.cache/
+*.tmp
+*.temp
+*.orig
+*.rej
+
+# TypeScript and bundler caches
+*.tsbuildinfo
+.esbuild/
+.vite/
+
+# Local databases and runtime state
+*.db
+*.db-shm
+*.db-wal
+.codegraph/*
+!.codegraph/.gitignore
+.zcode-plugin-data/
+
+# Generated build and release artifacts
+# The release ZIP contains dist/; neither is source-controlled.
+dist/
+artifacts/
