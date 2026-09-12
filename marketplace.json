@@ -6,7 +6,7 @@
       "name": "langfuse-observability",
       "source": ".",
       "description": "Fail-open Langfuse tracing for ZCode sessions and tool calls.",
-      "version": "0.1.0",
+      "version": "0.1.1",
       "category": "observability",
       "tags": [
         "langfuse",

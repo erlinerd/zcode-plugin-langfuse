@@ -46,9 +46,12 @@ function createTurn(
   };
 }
 
+const TRUNCATION_MARKER = "… [truncated]";
+
 function truncate(value: string, maxChars: number): string {
   if (value.length <= maxChars) return value;
-  return `${value.slice(0, Math.max(0, maxChars - 18))}… [truncated]`;
+  if (maxChars <= TRUNCATION_MARKER.length) return value.slice(0, maxChars);
+  return `${value.slice(0, maxChars - TRUNCATION_MARKER.length)}${TRUNCATION_MARKER}`;
 }
 
 function boundedValue(value: JsonValue, maxChars: number): JsonValue {

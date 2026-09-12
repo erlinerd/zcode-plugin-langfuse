@@ -171,6 +171,35 @@ describe("TurnTracker", () => {
     });
   });
 
+  it("never exceeds the configured capture limit", async () => {
+    const { tracker, sink } = createTracker({ maxCaptureChars: 1 });
+
+    await tracker.handle(payload("UserPromptSubmit", { prompt: "private" }));
+    await tracker.handle(
+      payload("PreToolUse", {
+        tool_use_id: "tool-1",
+        tool_name: "Bash",
+        tool_input: { command: "npm test" },
+      }),
+    );
+    await tracker.handle(
+      payload("PostToolUse", {
+        tool_use_id: "tool-1",
+        tool_name: "Bash",
+        tool_output: { stdout: "private output" },
+      }),
+    );
+    await tracker.handle(
+      payload("Stop", { last_assistant_message: "private response" }),
+    );
+
+    const turn = sink.turns[0];
+    expect(turn?.prompt?.length).toBeLessThanOrEqual(1);
+    expect(turn?.assistantMessage?.length).toBeLessThanOrEqual(1);
+    expect(turn?.tools[0]?.input).toHaveLength(1);
+    expect(turn?.tools[0]?.output).toHaveLength(1);
+  });
+
   it("supports metadata-only mode without retaining prompt or tool payloads", async () => {
     const { tracker, sink, store } = createTracker({
       capturePrompts: false,

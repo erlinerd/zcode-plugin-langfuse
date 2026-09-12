@@ -1,3 +1,6 @@
+import { mkdtempSync, rmSync, writeFileSync } from "node:fs";
+import { tmpdir } from "node:os";
+import { join } from "node:path";
 import { describe, expect, it } from "vitest";
 import { isConfigured, readConfig } from "../src/application/config.js";
 
@@ -41,11 +44,11 @@ describe("configuration", () => {
     expect(isConfigured(config)).toBe(false);
   });
 
-  it("fails closed for malformed URLs and incomplete credentials", () => {
+  it("fails closed for non-HTTPS URLs and incomplete credentials", () => {
     const config = readConfig(
       {
         ZCODE_USER_CONFIG_LANGFUSE_PUBLIC_KEY: "public-only",
-        ZCODE_USER_CONFIG_LANGFUSE_BASE_URL: "file:///tmp/langfuse",
+        ZCODE_USER_CONFIG_LANGFUSE_BASE_URL: "http://localhost:3000",
       },
       {},
     );
@@ -71,5 +74,47 @@ describe("configuration", () => {
       baseUrl: "https://stored.example.test",
       capturePrompts: false,
     });
+  });
+
+  it("prefers standard process environment over persisted options", () => {
+    const config = readConfig(
+      {
+        LANGFUSE_CAPTURE_PROMPTS: "false",
+        LANGFUSE_BASE_URL: "https://environment.example.test",
+      },
+      {
+        capture_prompts: true,
+        langfuse_base_url: "https://stored.example.test",
+      },
+    );
+
+    expect(config.capturePrompts).toBe(false);
+    expect(config.baseUrl).toBe("https://environment.example.test");
+  });
+
+  it("does not guess a persisted plugin without ZCODE_PLUGIN_ID", () => {
+    const directory = mkdtempSync(join(tmpdir(), "zcode-langfuse-config-"));
+    const configPath = join(directory, "config.json");
+    writeFileSync(
+      configPath,
+      JSON.stringify({
+        plugins: {
+          options: {
+            "langfuse-observability@other-market": {
+              langfuse_public_key: "wrong-plugin-public",
+              langfuse_secret_key: "wrong-plugin-secret",
+            },
+          },
+        },
+      }),
+    );
+
+    try {
+      const config = readConfig({ ZCODE_CONFIG_PATH: configPath });
+      expect(config.publicKey).toBeNull();
+      expect(config.secretKey).toBeNull();
+    } finally {
+      rmSync(directory, { recursive: true, force: true });
+    }
   });
 });

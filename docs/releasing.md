@@ -25,9 +25,9 @@ for the release.
    git diff --check
    ```
 
-5. Inspect the ZIP contents. It should contain only the plugin manifests, Hook
-   declaration, bundled runtime, and source map; it must not contain source
-   credentials, prompts, transcripts, or local state.
+5. Inspect the ZIP contents. It should contain only the plugin manifest, Hook
+   declaration, bundled runtime, and third-party notices; it must not contain
+   source credentials, prompts, transcripts, or local state.
 6. Open a pull request and wait for every CI matrix job to pass.
 
 `dist/` and `artifacts/` are generated directories. They are intentionally

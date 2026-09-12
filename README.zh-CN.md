@@ -5,7 +5,7 @@
 面向 ZCode 的社区 Langfuse 观测插件，按每个完成的 ZCode turn 生成一条
 Langfuse trace，目标是提交给 ZCode 官方插件市场。
 
-> 当前版本：`0.1.0`。插件遵循 **fail-open**：缺少凭据、Hook 输入损坏、本地
+> 当前版本：`0.1.1`。插件遵循 **fail-open**：缺少凭据、Hook 输入损坏、本地
 > 状态错误或 Langfuse 请求失败，都不能阻塞 ZCode 会话。
 
 ## 采集范围
@@ -21,6 +21,18 @@ Langfuse trace，目标是提交给 ZCode 官方插件市场。
 
 插件**不读取 transcript 文件，也不采集隐藏完整思维链**，只使用 ZCode
 Hook stdin 传入的字段。
+
+## 权限与副作用
+
+六个事件都会以当前用户权限启动一个 `node` process Hook。Hook 从 stdin
+读取一个 JSON 事件，并向 stdout 写入一个空 JSON 对象；不会启动 shell，也不会
+执行用户命令。
+
+Hook 会读取 `ZCODE_CONFIG_PATH` 指定的配置；未设置时读取
+`~/.zcode/cli/config.json` 中保存的插件选项。它只会在
+`ZCODE_PLUGIN_DATA` 或 ZCode 插件数据目录回退路径下写入有界、哈希化的 JSON
+会话状态。`Stop` 时使用本地凭据向用户配置的 Langfuse HTTPS 接口发送请求。
+不会读取 transcript 文件或隐藏推理内容。
 
 ## 配置
 
@@ -50,7 +62,8 @@ LANGFUSE_DEBUG
 ```
 
 `LANGFUSE_BASE_URL` 默认 `https://cloud.langfuse.com`；自建 Langfuse 请填写
-自己的地址，例如 `https://langfuse.example.com`。
+HTTPS 地址，例如 `https://langfuse.example.com`。明文 HTTP 地址会被拒绝并回退到
+默认 HTTPS 地址。
 
 敏感 secret 不要写入仓库或 `hooks/hooks.json`。Hook 会根据运行时提供的
 `ZCODE_PLUGIN_ID` 从 ZCode 的 `plugins.options` 读取本插件配置；这是因为当前
@@ -68,6 +81,13 @@ LANGFUSE_CAPTURE_TOOL_OUTPUTS=false
 关闭后，内容不会写入 Langfuse，也不会写入本地会话状态；仍保留 session、
 工具数量等结构化元数据。单字段默认最多采集 20000 个字符，可用
 `LANGFUSE_MAX_CAPTURE_CHARS` 调整。
+
+## 第三方软件
+
+运行时使用 `langfuse` 3.38.20、`langfuse-core` 3.38.20 和 `mustache` 4.2.0，
+均为 MIT 许可证。版本、来源和许可证见
+[THIRD_PARTY_NOTICES.md](THIRD_PARTY_NOTICES.md)。Langfuse 是用户选择的外部服务，
+仓库不会打包凭据。
 
 ## 在 ZCode 中本地测试
 
@@ -111,8 +131,8 @@ artifacts/plugin.zip
 artifacts/plugin.zip.sha256
 ```
 
-ZIP 包含 ZCode manifest、Hook 声明、SDK bundle 和 source map。`dist/` 与
-`artifacts/` 都是生成目录，不提交到源码仓库。
+ZIP 包含 ZCode manifest、Hook 声明、SDK bundle 和第三方声明。
+`dist/` 与 `artifacts/` 都是生成目录，不提交到源码仓库。
 
 目录分层：
 

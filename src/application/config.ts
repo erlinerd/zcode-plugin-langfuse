@@ -4,7 +4,7 @@ import { join } from "node:path";
 import type { HookConfig } from "../domain/types.js";
 
 const DEFAULT_BASE_URL = "https://cloud.langfuse.com";
-const DEFAULT_RELEASE = "0.1.0";
+const DEFAULT_RELEASE = "0.1.1";
 const DEFAULT_MAX_CAPTURE_CHARS = 20_000;
 
 export type StoredOption = string | number | boolean;
@@ -80,13 +80,9 @@ function readStoredOptions(env: NodeJS.ProcessEnv): StoredOptions {
       )
         continue;
       const optionEntries = options as Record<string, unknown>;
-      const pluginId =
-        configuredPluginId && optionEntries[configuredPluginId]
-          ? configuredPluginId
-          : Object.keys(optionEntries).find((key) =>
-              key.startsWith("langfuse-observability@"),
-            );
-      if (pluginId) return parseStoredOptions(optionEntries[pluginId]);
+      if (configuredPluginId && optionEntries[configuredPluginId]) {
+        return parseStoredOptions(optionEntries[configuredPluginId]);
+      }
     } catch {
       // A missing or unreadable user config must not block a ZCode hook.
     }
@@ -102,8 +98,8 @@ function option(
 ): string | undefined {
   return firstNonEmpty(
     userConfig(env, name),
-    storedOptions[name],
     env[environmentName],
+    storedOptions[name],
   );
 }
 
@@ -128,8 +124,7 @@ function normalizeBaseUrl(value: string | undefined): string {
   const candidate = value ?? DEFAULT_BASE_URL;
   try {
     const url = new URL(candidate);
-    if (url.protocol !== "http:" && url.protocol !== "https:")
-      return DEFAULT_BASE_URL;
+    if (url.protocol !== "https:") return DEFAULT_BASE_URL;
     return candidate.replace(/\/+$/, "");
   } catch {
     return DEFAULT_BASE_URL;

@@ -6,7 +6,7 @@ A community ZCode plugin that sends one Langfuse trace per completed ZCode turn.
 It is designed for review and possible inclusion in the ZCode official plugin
 marketplace.
 
-> **Status:** early community contribution (`0.1.0`). The plugin is fail-open:
+> **Status:** early community contribution (`0.1.1`). The plugin is fail-open:
 > a missing credential, malformed hook payload, local state error, or Langfuse
 > request error must never block a ZCode session.
 
@@ -31,6 +31,19 @@ At `Stop`, it emits a trace named `ZCode Turn` containing:
 
 It does **not** read the transcript file or collect hidden chain-of-thought. It
 only uses fields delivered in the ZCode hook payload.
+
+## Permissions and side effects
+
+Each of the six events starts a `node` process with the current user's
+permissions. The process reads one JSON Hook event from stdin and writes one
+empty JSON object to stdout; it does not spawn a shell or run user commands.
+
+The hook reads `ZCODE_CONFIG_PATH`, or
+`~/.zcode/cli/config.json` when that variable is unset, to find persisted plugin
+options. It writes only bounded, hashed JSON session state under
+`ZCODE_PLUGIN_DATA`, or the ZCode plugin data directory fallback. At `Stop`,
+it sends HTTPS requests to the configured Langfuse ingestion endpoint using the
+local credentials. No transcript files or hidden reasoning are read.
 
 ## Architecture
 
@@ -86,7 +99,8 @@ LANGFUSE_DEBUG
 ```
 
 `LANGFUSE_BASE_URL` defaults to `https://cloud.langfuse.com`. Set it to your
-self-hosted URL, for example `https://langfuse.example.com`.
+self-hosted HTTPS URL, for example `https://langfuse.example.com`. Plain HTTP
+URLs are rejected and replaced with the default HTTPS endpoint.
 
 For a self-hosted project, configure the public and secret keys in the plugin
 configuration. The hook reads its own persisted `plugins.options` entry using
@@ -129,8 +143,8 @@ artifacts/plugin.zip
 artifacts/plugin.zip.sha256
 ```
 
-The ZIP contains the ZCode manifests, Hook declaration, bundled SDK, and source
-map required by the runtime. Neither `dist/` nor `artifacts/` is committed.
+The ZIP contains the ZCode manifest, Hook declaration, bundled SDK, and
+third-party notices. Neither `dist/` nor `artifacts/` is committed.
 
 The hook can be smoke-tested without credentials:
 
@@ -149,6 +163,14 @@ Expected stdout is one empty hook result object:
 
 Diagnostics, when enabled, go to stderr. They never contain keys or full
 prompts.
+
+## Third-party software
+
+The runtime uses `langfuse` 3.38.20, `langfuse-core` 3.38.20, and `mustache`
+4.2.0. Each dependency is MIT-licensed; see
+[THIRD_PARTY_NOTICES.md](THIRD_PARTY_NOTICES.md) for versions, provenance, and
+source links. Langfuse is an external service selected by the user and is not
+bundled with credentials.
 
 ## Local installation for testing
 

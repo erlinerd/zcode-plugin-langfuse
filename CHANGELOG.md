@@ -13,6 +13,12 @@ The version must stay synchronized in `package.json`,
 - Switch distribution to CI-built ZIP artifacts with SHA-256 checksums.
 - Rename new Langfuse traces to `ZCode Turn`.
 
+## [0.1.1] — 2026-09-13
+
+- Enforced HTTPS-only Langfuse endpoints and environment-first configuration.
+- Kept every captured value within `max_capture_chars`, including tiny limits.
+- Added third-party dependency license and provenance notices.
+
 ## [0.1.0] — 2026-09-12
 
 - Initial community ZCode plugin implementation.

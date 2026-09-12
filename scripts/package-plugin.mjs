@@ -31,10 +31,8 @@ if (!/^[A-Za-z0-9][A-Za-z0-9._-]*$/.test(pluginName)) {
 const packageFiles = [
   ".zcode-plugin/plugin.json",
   "hooks/hooks.json",
-  "dist/plugin.json",
   "dist/hooks/entry.mjs",
-  "dist/hooks/entry.mjs.map",
-  "dist/hooks/hooks.json",
+  "THIRD_PARTY_NOTICES.md",
 ];
 
 await rm(stagingDir, { recursive: true, force: true });
