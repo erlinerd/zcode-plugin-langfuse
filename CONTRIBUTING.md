@@ -17,7 +17,8 @@ git diff --check
 `dist/` and `artifacts/` are generated release directories and are ignored by
 Git. Source changes that affect the runtime must pass
 `npm run package:plugin`; the CI workflow builds the bundle, creates the ZIP,
-and verifies its SHA-256 checksum.
+and verifies its SHA-256 checksum. Linting uses Oxlint; run `npm run lint` or
+`npm run lint:fix` when needed.
 
 ## Contribution boundaries
 

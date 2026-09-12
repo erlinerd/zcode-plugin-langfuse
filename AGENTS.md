@@ -75,3 +75,22 @@ git diff --check
 For a runtime change, also run a synthetic Hook smoke test with fake
 credentials and confirm stdout remains `{}` and local test state is cleaned up.
 Never use production credentials or real user content for this test.
+
+## Agent skills
+
+### Issue tracker
+
+Issues and specs live as markdown files under `.scratch/<feature-slug>/`.
+See `docs/agents/issue-tracker.md`.
+
+### Triage labels
+
+Use the five default labels: `needs-triage`, `needs-info`,
+`ready-for-agent`, `ready-for-human`, and `wontfix`.
+See `docs/agents/triage-labels.md`.
+
+### Domain docs
+
+This is a single-context repository: use root `CONTEXT.md` and
+`docs/adr/` when those files exist.
+See `docs/agents/domain.md`.
