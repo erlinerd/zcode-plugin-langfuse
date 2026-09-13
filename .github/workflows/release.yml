@@ -33,7 +33,9 @@ jobs:
       - name: Create GitHub release
         env:
           GH_TOKEN: ${{ github.token }}
-        run: >-
-          gh release create "$GITHUB_REF_NAME"
-          artifacts/plugin.zip artifacts/plugin.zip.sha256
-          --verify-tag --generate-notes --title "$GITHUB_REF_NAME"
+        run: |
+          version=$(node -p "require('./.zcode-plugin/plugin.json').version")
+          gh release create "$GITHUB_REF_NAME" \
+            "artifacts/zcode-plugin-langfuse-v${version}.zip" \
+            "artifacts/zcode-plugin-langfuse-v${version}.zip.sha256" \
+            --verify-tag --generate-notes --title "$GITHUB_REF_NAME"

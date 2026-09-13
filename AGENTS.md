@@ -23,7 +23,7 @@ by ZCode Hook stdin, never hidden chain-of-thought or transcript-file content.
 3. **Package.** If runtime source or manifests change, run
    `npm run package:plugin`. Keep versions synchronized in `package.json`,
    `package-lock.json`, `.zcode-plugin/plugin.json`, and `marketplace.json`.
-   Completion: `artifacts/plugin.zip` and its checksum exist, and
+   Completion: the versioned release ZIP and its checksum exist under `artifacts/`, and
    `npm run validate:artifact` reports success.
 4. **Verify.** Run the complete gate below and inspect the final diff for
    credentials, private payloads, unsupported Hook events, and accidental
@@ -53,9 +53,9 @@ by ZCode Hook stdin, never hidden chain-of-thought or transcript-file content.
 - Plugin metadata and user configuration: `.zcode-plugin/plugin.json`.
 - Marketplace registration: `marketplace.json`.
 - Hook declarations: `hooks/hooks.json`.
-- Generated local installation files: `dist/`; release output:
-  `artifacts/plugin.zip` and `artifacts/plugin.zip.sha256`. Do not hand-edit or
-  commit generated artifacts.
+- Generated local installation files: `dist/`; release output: the versioned
+  ZIP and checksum under `artifacts/` (named `<plugin>-v<version>.zip`). Do not
+  hand-edit or commit generated artifacts.
 - User-facing behavior: keep `README.md` (English) and `README.zh-CN.md`
   (Simplified Chinese) synchronized when configuration or behavior changes.
 - Release procedure: read `docs/releasing.md` for versioning or publication.
@@ -67,7 +67,7 @@ by ZCode Hook stdin, never hidden chain-of-thought or transcript-file content.
 ```bash
 npm run check
 npm run package:plugin
-(cd artifacts && shasum -a 256 -c plugin.zip.sha256)
+(cd artifacts && shasum -a 256 -c *.sha256)
 npm audit --registry=https://registry.npmjs.org --omit=dev --audit-level=high
 git diff --check
 ```

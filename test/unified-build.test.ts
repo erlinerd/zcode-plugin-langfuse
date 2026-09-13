@@ -11,6 +11,7 @@ const pluginManifest = JSON.parse(
 ) as { name: string; version: string };
 const layoutRoot = join(repoRoot, "artifacts", "plugin-layout");
 const pluginLayoutRoot = join(layoutRoot, "plugins", "zcode-plugin-langfuse");
+const archiveName = `zcode-plugin-langfuse-v${pluginManifest.version}.zip`;
 
 function packagePlugin() {
   execFileSync(npmCommand, ["run", "package:plugin"], {
@@ -36,13 +37,13 @@ describe("unified plugin package", () => {
   it("creates the release archive and plugin catalog layout together", () => {
     packagePlugin();
 
-    expect(existsSync(join(repoRoot, "artifacts", "plugin.zip"))).toBe(true);
-    expect(existsSync(join(repoRoot, "artifacts", "plugin.zip.sha256"))).toBe(
-      true,
-    );
+    expect(existsSync(join(repoRoot, "artifacts", archiveName))).toBe(true);
+    expect(
+      existsSync(join(repoRoot, "artifacts", `${archiveName}.sha256`)),
+    ).toBe(true);
     const zipListing = execFileSync(
       "unzip",
-      ["-l", join(repoRoot, "artifacts", "plugin.zip")],
+      ["-l", join(repoRoot, "artifacts", archiveName)],
       { encoding: "utf8" },
     );
     expect(zipListing).toContain("marketplace.json");

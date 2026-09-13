@@ -55,7 +55,7 @@ Before requesting review:
 
 - add or update tests for behavior changes;
 - run `npm run check` and `npm run package:plugin`;
-- verify `artifacts/plugin.zip` with its `.sha256` file;
+- verify the versioned ZIP under `artifacts/` with its `.sha256` file;
 - inspect `git diff --check` and the package contents;
 - remove credentials and private data from commits, logs, and fixtures.
 

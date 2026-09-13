@@ -22,7 +22,7 @@ outputs.
    npm ci
    npm run check
    npm run package:plugin
-   (cd artifacts && shasum -a 256 -c plugin.zip.sha256)
+   (cd artifacts && shasum -a 256 -c *.sha256)
    git diff --check
    ```
 
@@ -42,11 +42,12 @@ marketplace synchronization.
 ## Publish
 
 Pushing an annotated tag such as `v0.2.0` runs `.github/workflows/release.yml`.
-That workflow runs the unified package build and uploads these release assets:
+That workflow runs the unified package build and uploads these release assets,
+named `<plugin>-v<version>.zip` plus its `.sha256` checksum:
 
 ```text
-plugin.zip
-plugin.zip.sha256
+zcode-plugin-langfuse-v0.2.1.zip
+zcode-plugin-langfuse-v0.2.1.zip.sha256
 ```
 
 The official ZCode marketplace catalog requires an in-tree source in the form

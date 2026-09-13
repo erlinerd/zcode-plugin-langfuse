@@ -19,8 +19,9 @@ try {
   });
 }
 const pluginName = pluginManifest.name;
-const archivePath = resolve(artifactDir, "plugin.zip");
-const checksumPath = resolve(artifactDir, "plugin.zip.sha256");
+const archiveName = `${pluginName}-v${pluginManifest.version}.zip`;
+const archivePath = resolve(artifactDir, archiveName);
+const checksumPath = resolve(artifactDir, `${archiveName}.sha256`);
 const packageRoot = resolve(stagingDir, pluginName);
 
 if (!/^[A-Za-z0-9][A-Za-z0-9._-]*$/.test(pluginName)) {
@@ -56,7 +57,7 @@ try {
   });
 } catch (error) {
   throw new Error(
-    "Unable to create plugin.zip. Install the zip command before packaging.",
+    "Unable to create the plugin archive. Install the zip command before packaging.",
     { cause: error },
   );
 }
@@ -64,7 +65,7 @@ try {
 const checksum = createHash("sha256")
   .update(await readFile(archivePath))
   .digest("hex");
-await writeFile(checksumPath, `${checksum}  plugin.zip\n`);
+await writeFile(checksumPath, `${checksum}  ${archiveName}\n`);
 await rm(stagingDir, { recursive: true, force: true });
 
 const pluginLayout = await assemblePluginLayout({
@@ -76,7 +77,7 @@ process.stdout.write(
   `${JSON.stringify({
     plugin: pluginName,
     version: pluginManifest.version,
-    archive: "artifacts/plugin.zip",
+    archive: `artifacts/${archiveName}`,
     sha256: checksum,
     marketplacePath: pluginName,
     layout: relative(root, pluginLayout.outputRoot),
