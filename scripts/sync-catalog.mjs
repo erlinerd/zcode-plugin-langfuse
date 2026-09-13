@@ -230,7 +230,11 @@ async function syncCatalog({
   git(repoPath, ["add", "--", "marketplace.json"]);
 
   const bundlePathspec = `${pluginPathspec}/dist/hooks/entry.mjs`;
-  const trackedBundle = git(repoPath, ["ls-files", "--", bundlePathspec]).trim();
+  const trackedBundle = git(repoPath, [
+    "ls-files",
+    "--",
+    bundlePathspec,
+  ]).trim();
   assert(
     trackedBundle !== "",
     `${bundlePathspec} is not tracked after staging. Catalog .gitignore rules ignore dist/; the sync must force-add the bundled entry (see the mimosa payload whitelist precedent).`,
@@ -253,8 +257,12 @@ async function syncCatalog({
         stdio: ["ignore", "pipe", "pipe"],
       });
     } catch (error) {
+      const stderr =
+        error && typeof error === "object" && "stderr" in error
+          ? String(error.stderr).trim().split("\n").slice(-2).join(" ")
+          : "";
       throw new Error(
-        `git push origin ${branch} failed. Check remote access: run 'gh auth status', verify the origin URL, or confirm CATALOG_SYNC_PAT has Contents write on the fork. The sync commit is already on ${branch}.`,
+        `git push origin ${branch} failed${stderr ? `: ${stderr}` : ""}. Check remote access: run 'gh auth status', verify the origin URL, or confirm CATALOG_SYNC_PAT has Contents write on the fork. The sync commit is already on ${branch}.`,
         { cause: error },
       );
     }
