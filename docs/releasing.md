@@ -27,10 +27,11 @@ outputs.
    ```
 
 5. Inspect both generated outputs. The ZIP should contain only the plugin
-   manifest, Hook declaration, bundled runtime, and third-party notices. The
-   catalog-ready layout should contain the same bundle plus its manifests,
-   documentation, license, and marketplace entry. Neither output may contain
-   credentials, prompts, transcripts, or local state.
+   manifest, Hook declaration, bundled runtime, third-party notices, and the
+   marketplace manifest (so the extracted directory can be added directly as
+   a local marketplace). The catalog-ready layout should contain the same
+   bundle plus its manifests, documentation, license, and marketplace entry.
+   Neither output may contain credentials, prompts, transcripts, or local state.
 6. Open a pull request and wait for every CI matrix job to pass.
 
 `dist/` and `artifacts/` are generated directories. They are intentionally

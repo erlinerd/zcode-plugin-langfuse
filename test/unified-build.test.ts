@@ -40,6 +40,12 @@ describe("unified plugin package", () => {
     expect(existsSync(join(repoRoot, "artifacts", "plugin.zip.sha256"))).toBe(
       true,
     );
+    const zipListing = execFileSync(
+      "unzip",
+      ["-l", join(repoRoot, "artifacts", "plugin.zip")],
+      { encoding: "utf8" },
+    );
+    expect(zipListing).toContain("marketplace.json");
 
     const expectedFiles = [
       ".zcode-plugin/plugin.json",

@@ -33,6 +33,7 @@ const packageFiles = [
   ".zcode-plugin/plugin.json",
   "hooks/hooks.json",
   "dist/hooks/entry.mjs",
+  "marketplace.json",
   "THIRD_PARTY_NOTICES.md",
 ];
 
