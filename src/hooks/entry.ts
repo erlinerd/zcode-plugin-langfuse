@@ -28,7 +28,7 @@ async function readStdin(): Promise<string> {
 }
 
 function diagnostics(enabled: boolean, message: string): void {
-  if (enabled) process.stderr.write(`[langfuse-observability] ${message}\n`);
+  if (enabled) process.stderr.write(`[zcode-plugin-langfuse] ${message}\n`);
 }
 
 async function main(): Promise<void> {

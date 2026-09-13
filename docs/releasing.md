@@ -48,14 +48,14 @@ its checksum, following the format used by the official marketplace:
 
 ```json
 {
-  "name": "langfuse-observability",
+  "name": "zcode-plugin-langfuse",
   "version": "0.2.0",
   "source": {
     "source": "url",
     "type": "zip",
     "url": "https://github.com/OWNER/REPOSITORY/releases/download/v0.2.0/plugin.zip",
     "sha256": "COPY_THE_VALUE_FROM_plugin.zip.sha256",
-    "path": "langfuse-observability"
+    "path": "zcode-plugin-langfuse"
   }
 }
 ```

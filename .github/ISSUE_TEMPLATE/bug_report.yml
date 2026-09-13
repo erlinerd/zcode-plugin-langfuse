@@ -14,7 +14,7 @@ body:
     attributes:
       label: Plugin version
       description: The installed plugin version and marketplace source.
-      placeholder: "0.1.0 from zcode-langfuse-community"
+      placeholder: "0.1.0 from zcode-plugin-langfuse"
     validations:
       required: true
   - type: input

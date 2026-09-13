@@ -94,22 +94,22 @@ LANGFUSE_CAPTURE_TOOL_OUTPUTS=false
 ZCode 选择本地目录时会按“插件市场”读取，因此仓库根目录包含
 `marketplace.json`。先运行 `npm run build`，再在 **设置 → 插件 → 添加插件市场 →
 选择目录** 中选择本仓库，从“个人”市场安装并启用
-`langfuse-observability`。正式市场使用版本化 ZIP 和 SHA-256。
+`zcode-plugin-langfuse`。正式市场使用版本化 ZIP 和 SHA-256。
 
 ## 在线 ZCode 插件市场
 
 在 **设置 → 插件 → 创建 → 添加插件市场** 中，使用 GitHub 仓库地址添加：
 
-- 社区市场仓库：<https://github.com/erlinerd/zcode-langfuse-plugin>
-- 市场清单：<https://raw.githubusercontent.com/erlinerd/zcode-langfuse-plugin/main/marketplace.json>
-- 插件清单：<https://raw.githubusercontent.com/erlinerd/zcode-langfuse-plugin/main/.zcode-plugin/plugin.json>
-- 最新插件 ZIP：<https://github.com/erlinerd/zcode-langfuse-plugin/releases/latest/download/plugin.zip>
-- 最新 ZIP 校验文件：<https://github.com/erlinerd/zcode-langfuse-plugin/releases/latest/download/plugin.zip.sha256>
-- Release 页面：<https://github.com/erlinerd/zcode-langfuse-plugin/releases/latest>
+- 社区市场仓库：<https://github.com/erlinerd/zcode-plugin-langfuse>
+- 市场清单：<https://raw.githubusercontent.com/erlinerd/zcode-plugin-langfuse/main/marketplace.json>
+- 插件清单：<https://raw.githubusercontent.com/erlinerd/zcode-plugin-langfuse/main/.zcode-plugin/plugin.json>
+- 最新插件 ZIP：<https://github.com/erlinerd/zcode-plugin-langfuse/releases/latest/download/plugin.zip>
+- 最新 ZIP 校验文件：<https://github.com/erlinerd/zcode-plugin-langfuse/releases/latest/download/plugin.zip.sha256>
+- Release 页面：<https://github.com/erlinerd/zcode-plugin-langfuse/releases/latest>
 - ZCode 官方插件文档：<https://zcode.z.ai/en/docs/plugin>
 - ZCode 官方插件市场：<https://github.com/zai-org/zcode-plugins>
 
-本仓库市场名为 `zcode-langfuse-community`，`marketplace.json` 使用
+本仓库市场名为 `zcode-plugin-langfuse`，`marketplace.json` 使用
 `source: "."` 从仓库根目录解析插件。版本化发行文件由 GitHub Actions 的 tag
 workflow 生成。
 

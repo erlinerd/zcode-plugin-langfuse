@@ -1,12 +1,12 @@
 {
-  "name": "zcode-langfuse-community",
+  "name": "zcode-plugin-langfuse",
   "description": "Community ZCode plugins for Langfuse observability.",
   "plugins": [
     {
-      "name": "langfuse-observability",
+      "name": "zcode-plugin-langfuse",
       "source": ".",
       "description": "Fail-open Langfuse tracing for ZCode sessions and tool calls.",
-      "version": "0.1.1",
+      "version": "0.2.0",
       "category": "observability",
       "tags": [
         "langfuse",

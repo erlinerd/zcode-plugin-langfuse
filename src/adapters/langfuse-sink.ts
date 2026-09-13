@@ -1,7 +1,7 @@
 import { Langfuse } from "langfuse";
 import type { CompletedTurn, HookConfig, TraceSink } from "../domain/types.js";
 
-const SDK_INTEGRATION = "zcode-langfuse-observability";
+const SDK_INTEGRATION = "zcode-plugin-langfuse";
 const TRACE_NAME = "ZCode Turn";
 
 export class LangfuseTraceSink implements TraceSink {

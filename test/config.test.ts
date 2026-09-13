@@ -59,7 +59,7 @@ describe("configuration", () => {
 
   it("reads plugin options persisted by ZCode", () => {
     const config = readConfig(
-      { ZCODE_PLUGIN_ID: "langfuse-observability@zcode-langfuse-community" },
+      { ZCODE_PLUGIN_ID: "zcode-plugin-langfuse@zcode-plugin-langfuse" },
       {
         langfuse_public_key: "stored-public",
         langfuse_secret_key: "stored-secret",
@@ -93,14 +93,14 @@ describe("configuration", () => {
   });
 
   it("does not guess a persisted plugin without ZCODE_PLUGIN_ID", () => {
-    const directory = mkdtempSync(join(tmpdir(), "zcode-langfuse-config-"));
+    const directory = mkdtempSync(join(tmpdir(), "zcode-plugin-langfuse-config-"));
     const configPath = join(directory, "config.json");
     writeFileSync(
       configPath,
       JSON.stringify({
         plugins: {
           options: {
-            "langfuse-observability@other-market": {
+            "zcode-plugin-langfuse@other-market": {
               langfuse_public_key: "wrong-plugin-public",
               langfuse_secret_key: "wrong-plugin-secret",
             },
