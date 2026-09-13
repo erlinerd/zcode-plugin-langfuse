@@ -98,9 +98,11 @@ ZCode 选择本地目录时会按“插件市场”读取，因此仓库根目�
 
 ## 在线 ZCode 插件市场
 
-在 **设置 → 插件 → 创建 → 添加插件市场** 中，使用 GitHub 仓库地址添加：
+从 Release 页下载版本化 `plugin.zip` 并解压，在 **设置 → 插件 → 添加插件市场 →
+选择目录** 中选择解压后的插件目录安装。不要把全新检出的源码仓库直接添加为市场：
+其中没有 `dist/` bundle（生成目录不入库），Hook 无法启动。开发安装请先在检出目录
+运行 `npm install`（`prepare` 钩子会构建 `dist/`），再选择该目录。
 
-- 社区市场仓库：<https://github.com/erlinerd/zcode-plugin-langfuse>
 - 市场清单：<https://raw.githubusercontent.com/erlinerd/zcode-plugin-langfuse/main/marketplace.json>
 - 插件清单：<https://raw.githubusercontent.com/erlinerd/zcode-plugin-langfuse/main/.zcode-plugin/plugin.json>
 - 最新插件 ZIP：<https://github.com/erlinerd/zcode-plugin-langfuse/releases/latest/download/plugin.zip>

@@ -187,13 +187,15 @@ it, and configure its `userConfig` values.
 The plugin manifest is at `.zcode-plugin/plugin.json`; the hook declaration is
 at `hooks/hooks.json`.
 
-## Online ZCode marketplace
+## Install a release
 
-Add this repository in **Settings → Plugins → Create → Add marketplace** using
-its GitHub repository URL. ZCode accepts a GitHub repository or its URL as a
-marketplace source.
+Download the versioned `plugin.zip` from the release page, extract it, and add
+the extracted plugin directory as a local marketplace via **Settings →
+Plugins → Add marketplace**. Do not add a fresh checkout of this repository as
+a marketplace: it has no `dist/` bundle (generated, not committed), so hooks
+cannot start. For a development install from a checkout, run `npm install`
+first — the `prepare` hook builds `dist/`.
 
-- Community marketplace repository: <https://github.com/erlinerd/zcode-plugin-langfuse>
 - Marketplace manifest: <https://raw.githubusercontent.com/erlinerd/zcode-plugin-langfuse/main/marketplace.json>
 - Plugin manifest: <https://raw.githubusercontent.com/erlinerd/zcode-plugin-langfuse/main/.zcode-plugin/plugin.json>
 - Latest plugin ZIP: <https://github.com/erlinerd/zcode-plugin-langfuse/releases/latest/download/plugin.zip>
