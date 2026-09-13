@@ -12,6 +12,8 @@ The version must stay synchronized in `package.json`,
 - Improve repository governance, validation, and contribution documentation.
 - Switch distribution to CI-built ZIP artifacts with SHA-256 checksums.
 - Rename new Langfuse traces to `ZCode Turn`.
+- Shared the plugin identifier as a single `PLUGIN_ID` constant pinned to the
+  packaged manifests by a test.
 - Unified the plugin, marketplace, package, and repository identifiers as
   `zcode-plugin-langfuse` and released this as `0.2.0`.
 

@@ -10,6 +10,7 @@ import {
 } from "node:fs/promises";
 import { homedir, tmpdir } from "node:os";
 import { join } from "node:path";
+import { PLUGIN_ID } from "../domain/identity.js";
 import type {
   JsonValue,
   SessionState,
@@ -116,7 +117,7 @@ function defaultDataDir(): string {
     "cli",
     "plugins",
     "data",
-    "zcode-plugin-langfuse",
+    PLUGIN_ID,
   );
 }
 

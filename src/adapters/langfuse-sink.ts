@@ -1,7 +1,8 @@
 import { Langfuse } from "langfuse";
+import { PLUGIN_ID } from "../domain/identity.js";
 import type { CompletedTurn, HookConfig, TraceSink } from "../domain/types.js";
 
-const SDK_INTEGRATION = "zcode-plugin-langfuse";
+const SDK_INTEGRATION = PLUGIN_ID;
 const TRACE_NAME = "ZCode Turn";
 
 export class LangfuseTraceSink implements TraceSink {

@@ -4,6 +4,7 @@ import { NoopTraceSink, TurnTracker } from "../application/turn-tracker.js";
 import { JsonStateStore } from "../adapters/json-state-store.js";
 import { LangfuseTraceSink } from "../adapters/langfuse-sink.js";
 import { eventName, sessionId } from "../domain/extract.js";
+import { PLUGIN_ID } from "../domain/identity.js";
 import type { Clock, HookPayload, IdGenerator } from "../domain/types.js";
 
 function isRecord(value: unknown): value is Record<string, unknown> {
@@ -28,7 +29,7 @@ async function readStdin(): Promise<string> {
 }
 
 function diagnostics(enabled: boolean, message: string): void {
-  if (enabled) process.stderr.write(`[zcode-plugin-langfuse] ${message}\n`);
+  if (enabled) process.stderr.write(`[${PLUGIN_ID}] ${message}\n`);
 }
 
 async function main(): Promise<void> {
