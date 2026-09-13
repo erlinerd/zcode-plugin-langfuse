@@ -1,9 +1,10 @@
 # Releasing
 
-This repository ships a ZCode plugin through a versioned ZIP artifact rather
-than as an npm runtime package. Source code stays in Git; CI builds `dist/`,
-packages the required files, calculates a SHA-256 checksum, and uploads the ZIP
-for the release.
+This repository ships a ZCode plugin through two generated distribution
+outputs: a versioned ZIP artifact and a catalog-ready plugin layout. Source code
+stays in Git; the default `npm run package:plugin` command builds `dist/` once,
+packages the required files, calculates a SHA-256 checksum, and creates both
+outputs.
 
 ## Prepare a release
 
@@ -25,45 +26,35 @@ for the release.
    git diff --check
    ```
 
-5. Inspect the ZIP contents. It should contain only the plugin manifest, Hook
-   declaration, bundled runtime, and third-party notices; it must not contain
-   source credentials, prompts, transcripts, or local state.
+5. Inspect both generated outputs. The ZIP should contain only the plugin
+   manifest, Hook declaration, bundled runtime, and third-party notices. The
+   catalog-ready layout should contain the same bundle plus its manifests,
+   documentation, license, and marketplace entry. Neither output may contain
+   credentials, prompts, transcripts, or local state.
 6. Open a pull request and wait for every CI matrix job to pass.
 
 `dist/` and `artifacts/` are generated directories. They are intentionally
-ignored by Git and must not be added to a source pull request.
+ignored by Git and must not be added to a source pull request. The catalog-ready
+layout is under `artifacts/plugin-layout/` and is the input for a reviewed
+marketplace synchronization.
 
 ## Publish
 
 Pushing an annotated tag such as `v0.2.0` runs `.github/workflows/release.yml`.
-That workflow builds and uploads these release assets:
+That workflow runs the unified package build and uploads these release assets:
 
 ```text
 plugin.zip
 plugin.zip.sha256
 ```
 
-The official ZCode marketplace catalog should reference the immutable ZIP with
-its checksum, following the format used by the official marketplace:
-
-```json
-{
-  "name": "zcode-plugin-langfuse",
-  "version": "0.2.0",
-  "source": {
-    "source": "url",
-    "type": "zip",
-    "url": "https://github.com/OWNER/REPOSITORY/releases/download/v0.2.0/plugin.zip",
-    "sha256": "COPY_THE_VALUE_FROM_plugin.zip.sha256",
-    "path": "zcode-plugin-langfuse"
-  }
-}
-```
-
-Update the official catalog in a separate reviewed change when the release URL
-and checksum are available. The repository's root `marketplace.json` remains a
-local-development catalog using `source: "."`; run `npm run build` before
-installing it from a local directory.
+The official ZCode marketplace catalog requires an in-tree source in the form
+`./plugins/<name>`. Use the generated
+`artifacts/plugin-layout/plugins/zcode-plugin-langfuse/` directory and
+`artifacts/plugin-layout/marketplace-entry.json` as the inputs for a separate
+reviewed catalog change. Do not replace this with a ZIP URL: the root
+`marketplace.json` remains a local-development catalog using `source: "."`.
+Run `npm run build` before installing the local-development catalog.
 
 After publishing:
 

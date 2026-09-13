@@ -1,8 +1,9 @@
 import { createHash } from "node:crypto";
 import { execFileSync } from "node:child_process";
 import { cp, mkdir, readFile, rm, writeFile } from "node:fs/promises";
-import { dirname, resolve } from "node:path";
+import { dirname, relative, resolve } from "node:path";
 import { fileURLToPath } from "node:url";
+import { assemblePluginLayout } from "./build-layout.mjs";
 
 const root = resolve(dirname(fileURLToPath(import.meta.url)), "..");
 const artifactDir = resolve(root, "artifacts");
@@ -65,6 +66,11 @@ const checksum = createHash("sha256")
 await writeFile(checksumPath, `${checksum}  plugin.zip\n`);
 await rm(stagingDir, { recursive: true, force: true });
 
+const pluginLayout = await assemblePluginLayout({
+  sourceRoot: root,
+  outputRoot: resolve(artifactDir, "plugin-layout"),
+});
+
 process.stdout.write(
   `${JSON.stringify({
     plugin: pluginName,
@@ -72,5 +78,6 @@ process.stdout.write(
     archive: "artifacts/plugin.zip",
     sha256: checksum,
     marketplacePath: pluginName,
+    layout: relative(root, pluginLayout.outputRoot),
   })}\n`,
 );

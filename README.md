@@ -135,16 +135,20 @@ npm run check
 npm run package:plugin
 ```
 
-`npm run build` creates the local `dist/` bundle. `npm run package:plugin` then
-creates the ignored release files:
+`npm run build` creates the local `dist/` bundle. `npm run package:plugin` is the
+default distribution build: it runs the bundle build once, validates it, and
+creates both the ignored release files and the catalog-ready plugin layout:
 
 ```text
 artifacts/plugin.zip
 artifacts/plugin.zip.sha256
+artifacts/plugin-layout/plugins/zcode-plugin-langfuse/
+artifacts/plugin-layout/marketplace-entry.json
 ```
 
-The ZIP contains the ZCode manifest, Hook declaration, bundled SDK, and
-third-party notices. Neither `dist/` nor `artifacts/` is committed.
+The ZIP and plugin layout use the same generated bundle. The ZIP contains the
+ZCode manifest, Hook declaration, bundled SDK, and third-party notices. Neither
+`dist/` nor `artifacts/` is committed.
 
 The hook can be smoke-tested without credentials:
 
