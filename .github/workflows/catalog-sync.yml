@@ -1,0 +1,66 @@
+name: Catalog sync
+
+on:
+  push:
+    tags:
+      - "v*.*.*"
+  workflow_dispatch:
+    inputs:
+      branch:
+        description: Catalog fork branch to sync
+        required: false
+        default: feat/langfuse-observability
+
+concurrency:
+  group: catalog-sync-${{ github.ref }}
+  cancel-in-progress: false
+
+permissions:
+  contents: read
+
+jobs:
+  sync:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+      - uses: actions/setup-node@820762786026740c76f36085b0efc47a31fe5020 # v7.0.0
+        with:
+          node-version: 20
+      - run: npm ci
+      - run: npm run package:plugin
+      - name: Verify package checksum
+        working-directory: artifacts
+        run: shasum -a 256 -c plugin.zip.sha256
+      - name: Clone catalog fork
+        env:
+          CATALOG_SYNC_PAT: ${{ secrets.CATALOG_SYNC_PAT }}
+          CATALOG_BRANCH: ${{ inputs.branch || 'feat/langfuse-observability' }}
+        run: |
+          if [ -z "$CATALOG_SYNC_PAT" ]; then
+            echo "CATALOG_SYNC_PAT is not configured." >&2
+            echo "Create a fine-grained PAT with 'Contents: Read and write' access to erlinerd/zcode-plugins, then run: gh secret set CATALOG_SYNC_PAT" >&2
+            exit 1
+          fi
+          git clone --branch "$CATALOG_BRANCH" \
+            "https://x-access-token:${CATALOG_SYNC_PAT}@github.com/erlinerd/zcode-plugins.git" \
+            catalog-fork
+      - name: Sync the catalog layout
+        env:
+          CATALOG_BRANCH: ${{ inputs.branch || 'feat/langfuse-observability' }}
+        run: |
+          git -C catalog-fork config user.name "github-actions[bot]"
+          git -C catalog-fork config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          npm run sync:catalog -- \
+            --repo "$PWD/catalog-fork" \
+            --branch "$CATALOG_BRANCH" \
+            --push
+          remote_head=$(git -C catalog-fork rev-parse "origin/${CATALOG_BRANCH}")
+          local_head=$(git -C catalog-fork rev-parse HEAD)
+          if [ "$remote_head" != "$local_head" ]; then
+            echo "Push verification failed: origin/${CATALOG_BRANCH} is ${remote_head}, local HEAD is ${local_head}." >&2
+            exit 1
+          fi
+          echo "Catalog branch ${CATALOG_BRANCH} is at ${local_head}; the open PR receives this commit automatically."

@@ -83,3 +83,30 @@ the catalog entry in `marketplace.json`, and commits
 print the plan without writing anything, and `--push` to run
 `git push origin <branch>` after the commit. Re-running the same version is a
 no-op; a dirty fork or a missing branch stops with recovery guidance.
+
+## Automatic catalog sync
+
+Pushing a SemVer tag (`v*.*.*`) also runs `.github/workflows/catalog-sync.yml`,
+which builds with the same `npm run package:plugin` command and runs the sync
+against `erlinerd/zcode-plugins`. The workflow never touches the Release
+workflow; a catalog failure stays red on its own. It also supports a manual
+trial run that publishes no release:
+
+```bash
+gh workflow run catalog-sync.yml
+```
+
+First-time setup requires one fine-grained personal access token with
+**Contents: Read and write** limited to `erlinerd/zcode-plugins`, stored as a
+repository secret:
+
+```bash
+gh secret set CATALOG_SYNC_PAT
+```
+
+The token is only used in the fork clone URL and is masked by GitHub in logs;
+the workflow checks out the source repository with `persist-credentials:
+false`. If the workflow fails, it reports the failing step: a missing or
+expired token points back to the secret setup above, and any sync failure can
+always be reproduced locally with `npm run sync:catalog` and the recovery
+hints printed by the script.
