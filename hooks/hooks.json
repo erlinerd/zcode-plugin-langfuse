@@ -8,7 +8,7 @@
             "type": "process",
             "command": "node",
             "args": [
-              "${ZCODE_PLUGIN_ROOT}/payload/dist/hooks/entry.mjs"
+              "${ZCODE_PLUGIN_ROOT}/hooks/entry.mjs"
             ],
             "timeoutMs": 5000,
             "statusMessage": "Langfuse: preparing session tracing…"
@@ -23,7 +23,7 @@
             "type": "process",
             "command": "node",
             "args": [
-              "${ZCODE_PLUGIN_ROOT}/payload/dist/hooks/entry.mjs"
+              "${ZCODE_PLUGIN_ROOT}/hooks/entry.mjs"
             ],
             "timeoutMs": 5000
           }
@@ -37,7 +37,7 @@
             "type": "process",
             "command": "node",
             "args": [
-              "${ZCODE_PLUGIN_ROOT}/payload/dist/hooks/entry.mjs"
+              "${ZCODE_PLUGIN_ROOT}/hooks/entry.mjs"
             ],
             "timeoutMs": 5000
           }
@@ -51,7 +51,7 @@
             "type": "process",
             "command": "node",
             "args": [
-              "${ZCODE_PLUGIN_ROOT}/payload/dist/hooks/entry.mjs"
+              "${ZCODE_PLUGIN_ROOT}/hooks/entry.mjs"
             ],
             "timeoutMs": 5000
           }
@@ -65,7 +65,7 @@
             "type": "process",
             "command": "node",
             "args": [
-              "${ZCODE_PLUGIN_ROOT}/payload/dist/hooks/entry.mjs"
+              "${ZCODE_PLUGIN_ROOT}/hooks/entry.mjs"
             ],
             "timeoutMs": 5000
           }
@@ -79,7 +79,7 @@
             "type": "process",
             "command": "node",
             "args": [
-              "${ZCODE_PLUGIN_ROOT}/payload/dist/hooks/entry.mjs"
+              "${ZCODE_PLUGIN_ROOT}/hooks/entry.mjs"
             ],
             "timeoutMs": 20000,
             "statusMessage": "Langfuse: sending trace…"

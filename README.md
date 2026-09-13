@@ -6,7 +6,7 @@ A community ZCode plugin that sends one Langfuse trace per completed ZCode turn.
 It is designed for review and possible inclusion in the ZCode official plugin
 marketplace.
 
-> **Status:** early community contribution (`0.1.1`). The plugin is fail-open:
+> **Status:** early community contribution (`0.2.1`). The plugin is fail-open:
 > a missing credential, malformed hook payload, local state error, or Langfuse
 > request error must never block a ZCode session.
 
@@ -136,18 +136,28 @@ npm run package:plugin
 ```
 
 `npm run build` builds the complete `dist/` output, structured as a ZCode
-marketplace root (per the official catalog layout):
+marketplace shell whose single entry uses the official plugin layout (same
+shape as the `zcode-plugins-official` template):
 
 ```text
 dist/marketplace.json
 dist/plugins/zcode-plugin-langfuse/
+├── .zcode-plugin/plugin.json
+├── .claude-plugin/plugin.json      (identical copy for Claude compatibility)
+├── hooks/hooks.json                (points at hooks/entry.mjs)
+├── hooks/entry.mjs                 (sealed runtime bundle)
+├── README.md
+├── README_CN.md
+├── LICENSE
+└── THIRD_PARTY_NOTICES.md
 ```
 
 `dist/plugins/zcode-plugin-langfuse/` is the installable plugin: its
-`dist/hooks/entry.mjs` runtime, manifest, hooks, package metadata, dual-language
-README, license, and third-party notices. The release workflow compresses the
-tree into the versioned ZIP; the official catalog and local directory installs
-consume the tree as-is. Everything under `dist/` is generated and not committed.
+`hooks/entry.mjs` runtime, manifest, hooks, dual-language README, license, and
+third-party notices. The release workflow compresses the tree into the
+versioned ZIP; the official catalog and local directory installs consume the
+plugin directory as-is. Everything under `dist/` is generated and not
+committed.
 
 The hook can be smoke-tested without credentials:
 
@@ -155,7 +165,7 @@ The hook can be smoke-tested without credentials:
 printf '%s\n' '{"hook_event_name":"Stop","session_id":"smoke","last_assistant_message":"ok"}' \
   | ZCODE_PLUGIN_DATA="$(mktemp -d)" \
     LANGFUSE_DEBUG=true \
-    node dist/hooks/entry.mjs
+    node dist/plugins/zcode-plugin-langfuse/hooks/entry.mjs
 ```
 
 Expected stdout is one empty hook result object:
@@ -178,7 +188,8 @@ bundled with credentials.
 ## Local installation for testing
 
 ZCode treats a selected directory as a **plugin marketplace**, so this repository
-includes `marketplace.json` at its root. Build first, then use **Settings →
+includes `marketplace.json` at its root; its entry points at
+`./dist/plugins/zcode-plugin-langfuse`. Build first, then use **Settings →
 Plugins → Add marketplace → Select directory** and choose this repository.
 Install `zcode-plugin-langfuse` from the resulting personal marketplace, enable
 it, and configure its `userConfig` values.

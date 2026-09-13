@@ -9,8 +9,8 @@
 | --- | --- | --- | --- | --- |
 | **pi** | TS 源码直发（`files: ["src"]`，无 dist） | ❌ | ✅ npm install | 运行时类型剥离 |
 | **Codex** | rolldown bundle（`dist/index.mjs`，OTel 内联 2MB） | ✅ | 内联 | 发布者构建，npm tarball 交付 |
-| **ZCode ZIP 通道** | esbuild bundle（`dist/hooks/entry.mjs`） | ✅ | 内联 | 发布者构建（本仓库现状） |
-| **ZCode 官方目录** | plugin layout / payload 入树（mimosa 为构建产物先例） | 可选 | ❌ 零依赖 | 目录规则校验 + 人工审阅 |
+| **ZCode ZIP 通道** | esbuild bundle（`hooks/entry.mjs`，官方模板布局） | ✅ | 内联 | 发布者构建（本仓库现状） |
+| **ZCode 官方目录** | plugin layout（官方模板同构；mimosa payload 为另一构建产物先例） | 可选 | ❌ 零依赖 | 目录规则校验 + 人工审阅 |
 
 规律：**集成方式跟随分发通道**——能装依赖的通道（npm/uv）用官方 SDK；不能装的（zip/源码）用原生 fetch 直打 ingestion API。Langfuse 官方自己就是"每平台一个集成、同一 ingestion 协议"的实践者。
 
@@ -35,6 +35,7 @@
 ```
 
 - 两种载体共用一次 runtime bundle；默认分发构建同时产出 ZIP 与 plugin layout，避免人工翻写源码副本。
+- 2026-09-13 晚起 dist 定型为「市场壳 + 内层官方模板布局」：`dist/marketplace.json`（source `./plugins/<name>`）+ `dist/plugins/<name>/`（`.zcode-plugin/` + `.claude-plugin/` 副本 + `hooks/hooks.json` → `hooks/entry.mjs` 密封 bundle + 双语 README + LICENSE + notices，无 payload/、无 artifact 内 package.json）。安装进 ZCode 缓存的就是内层目录，与 example-plugin 逐文件同构。
 - PR #11 的内容切换为 bundle 版是一次性 rollout；后续同步由 `sync-catalog` 与 tag workflow 承担，merge 仍由维护者决定。
 - 首开 PR 后，后续版本 push 同一分支即可自动更新 PR；**merge 之后**的新版本才需要开新 PR。
 

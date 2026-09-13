@@ -3,7 +3,7 @@ import { dirname, isAbsolute, relative, resolve, sep } from "node:path";
 import { fileURLToPath } from "node:url";
 
 const root = resolve(dirname(fileURLToPath(import.meta.url)), "..");
-const defaultPluginRoot = resolve(root, "dist");
+const defaultLayoutRoot = resolve(root, "dist");
 const maxPluginFiles = 5000;
 const maxPluginBytes = 256 * 1024 * 1024;
 const semverPattern = /^\d+\.\d+\.\d+(?:-[0-9A-Za-z.-]+)?$/;
@@ -16,14 +16,14 @@ const expectedHookEvents = [
   "PostToolUseFailure",
   "Stop",
 ];
-const runtimeEntryRelative = "payload/dist/hooks/entry.mjs";
+const runtimeEntryRelative = "hooks/entry.mjs";
 
+// Required inside the plugin directory (official template layout).
 const requiredFiles = [
   ".zcode-plugin/plugin.json",
+  ".claude-plugin/plugin.json",
   "hooks/hooks.json",
   runtimeEntryRelative,
-  "marketplace.json",
-  "package.json",
   "README.md",
   "README_CN.md",
   "LICENSE",
@@ -62,10 +62,10 @@ async function ensureRegularFile(filePath, label) {
   assert(stats.isFile(), `${label} must be a regular file`);
 }
 
-async function validateTree(pluginRoot) {
+async function validateTree(rootPath) {
   let files = 0;
   let bytes = 0;
-  const pending = [pluginRoot];
+  const pending = [rootPath];
 
   while (pending.length > 0) {
     const current = pending.pop();
@@ -74,7 +74,7 @@ async function validateTree(pluginRoot) {
       const entryPath = resolve(current, entry.name);
       if (entry.isSymbolicLink()) {
         throw new Error(
-          `Plugin root contains a symlink: ${relative(pluginRoot, entryPath)}`,
+          `Plugin layout contains a symlink: ${relative(rootPath, entryPath)}`,
         );
       }
       if (entry.isDirectory()) {
@@ -91,36 +91,53 @@ async function validateTree(pluginRoot) {
 
   assert(
     files <= maxPluginFiles,
-    `Plugin root contains ${files} files; limit is ${maxPluginFiles}`,
+    `Plugin layout contains ${files} files; limit is ${maxPluginFiles}`,
   );
   assert(
     bytes <= maxPluginBytes,
-    `Plugin root contains ${bytes} bytes; limit is ${maxPluginBytes}`,
+    `Plugin layout contains ${bytes} bytes; limit is ${maxPluginBytes}`,
   );
 }
 
 /**
- * Validates an assembled plugin root laid out per the official ZCode plugin
- * structure: `.zcode-plugin/`, `hooks/`, `payload/dist/hooks/entry.mjs`
- * (the sealed bundle, mimosa-style), `marketplace.json`, and metadata files.
+ * Validates the generated marketplace shell in dist/: a marketplace.json whose
+ * single entry points at `./plugins/<name>`, where the plugin directory follows
+ * the official ZCode template layout (.zcode-plugin/, .claude-plugin/, hooks/
+ * with the sealed bundle at hooks/entry.mjs, and metadata files).
  */
-export async function validatePluginRoot(pluginRoot = defaultPluginRoot) {
-  const resolved = resolve(pluginRoot);
-  const manifest = await readJson(
-    resolve(resolved, ".zcode-plugin/plugin.json"),
-    "plugin manifest",
-  );
-  const packageJson = await readJson(
-    resolve(resolved, "package.json"),
-    "plugin package metadata",
-  );
-  const hooks = await readJson(
-    resolve(resolved, "hooks/hooks.json"),
-    "plugin hooks",
-  );
+export async function validatePluginRoot(layoutRoot = defaultLayoutRoot) {
+  const resolved = resolve(layoutRoot);
   const marketplace = await readJson(
     resolve(resolved, "marketplace.json"),
     "marketplace manifest",
+  );
+  assert(
+    Array.isArray(marketplace.plugins) && marketplace.plugins.length === 1,
+    "marketplace manifest must declare exactly one plugin entry",
+  );
+  const entry = marketplace.plugins[0];
+  assert(
+    typeof entry.name === "string" && kebabPattern.test(entry.name),
+    "marketplace entry name must be kebab-case",
+  );
+  const expectedSource = `./plugins/${entry.name}`;
+  assert(
+    entry.source === expectedSource,
+    `marketplace entry source must be ${expectedSource}`,
+  );
+  const pluginRoot = resolve(resolved, "plugins", entry.name);
+  assert(
+    isStrictChild(resolved, pluginRoot),
+    "plugin directory must stay inside the marketplace shell",
+  );
+
+  const manifest = await readJson(
+    resolve(pluginRoot, ".zcode-plugin/plugin.json"),
+    "plugin manifest",
+  );
+  const claudeManifest = await readJson(
+    resolve(pluginRoot, ".claude-plugin/plugin.json"),
+    "claude-compatible manifest",
   );
 
   assert(
@@ -137,29 +154,23 @@ export async function validatePluginRoot(pluginRoot = defaultPluginRoot) {
     "plugin manifest description is required",
   );
   assert(
-    manifest.license === packageJson.license,
-    "plugin and package licenses differ",
-  );
-  assert(
-    manifest.version === packageJson.version,
-    "plugin and package versions differ",
-  );
-  assert(
     Array.isArray(manifest.keywords) &&
       manifest.keywords.every((tag) => typeof tag === "string"),
     "plugin manifest keywords must be an array of strings",
   );
-
   assert(
-    Array.isArray(marketplace.plugins) && marketplace.plugins.length === 1,
-    "marketplace manifest must declare exactly one plugin entry",
-  );
-  const entry = marketplace.plugins[0];
-  assert(
-    entry.name === manifest.name && entry.version === manifest.version,
+    manifest.name === entry.name && manifest.version === entry.version,
     "marketplace entry and plugin manifest identities differ",
   );
+  assert(
+    JSON.stringify(claudeManifest) === JSON.stringify(manifest),
+    "claude-compatible manifest differs from the plugin manifest",
+  );
 
+  const hooks = await readJson(
+    resolve(pluginRoot, "hooks/hooks.json"),
+    "plugin hooks",
+  );
   assert(
     JSON.stringify(Object.keys(hooks.hooks ?? {})) ===
       JSON.stringify(expectedHookEvents),
@@ -176,20 +187,20 @@ export async function validatePluginRoot(pluginRoot = defaultPluginRoot) {
     assert(processHook?.type === "process", `${event} must use a process hook`);
     assert(
       processHook.args?.includes(expectedEntryArg),
-      `${event} must invoke the payload bundle entry`,
+      `${event} must invoke the bundled entry`,
     );
   }
 
   for (const relativePath of requiredFiles) {
-    await ensureRegularFile(resolve(resolved, relativePath), relativePath);
+    await ensureRegularFile(resolve(pluginRoot, relativePath), relativePath);
   }
   const runtimeEntry = await readFile(
-    resolve(resolved, runtimeEntryRelative),
+    resolve(pluginRoot, runtimeEntryRelative),
     "utf8",
   );
   assert(
     runtimeEntry.includes("Generated by npm run build"),
-    "payload entry is not a current build output",
+    "bundled entry is not a current build output",
   );
 
   await validateTree(resolved);
@@ -197,7 +208,8 @@ export async function validatePluginRoot(pluginRoot = defaultPluginRoot) {
   return {
     name: manifest.name,
     version: manifest.version,
-    pluginRoot: resolved,
-    runtimeEntry: resolve(resolved, runtimeEntryRelative),
+    layoutRoot: resolved,
+    pluginRoot,
+    runtimeEntry: resolve(pluginRoot, runtimeEntryRelative),
   };
 }

@@ -5,7 +5,7 @@
 面向 ZCode 的社区 Langfuse 观测插件，按每个完成的 ZCode turn 生成一条
 Langfuse trace，目标是提交给 ZCode 官方插件市场。
 
-> 当前版本：`0.1.1`。插件遵循 **fail-open**：缺少凭据、Hook 输入损坏、本地
+> 当前版本：`0.2.1`。插件遵循 **fail-open**：缺少凭据、Hook 输入损坏、本地
 > 状态错误或 Langfuse 请求失败，都不能阻塞 ZCode 会话。
 
 ## 采集范围
@@ -92,7 +92,8 @@ LANGFUSE_CAPTURE_TOOL_OUTPUTS=false
 ## 在 ZCode 中本地测试
 
 ZCode 选择本地目录时会按“插件市场”读取，因此仓库根目录包含
-`marketplace.json`。先运行 `npm run build`，再在 **设置 → 插件 → 添加插件市场 →
+`marketplace.json`，其条目指向 `./dist/plugins/zcode-plugin-langfuse`。先运行
+`npm run build`，再在 **设置 → 插件 → 添加插件市场 →
 选择目录** 中选择本仓库，从“个人”市场安装并启用
 `zcode-plugin-langfuse`。正式市场使用版本化 ZIP 和 SHA-256。
 
@@ -125,16 +126,25 @@ npm run package:plugin
 ```
 
 `npm run build` 会把官方 `langfuse` JavaScript SDK 打包进本地 `dist/`。
-`npm run build` 会构建完整的 `dist/` 输出，结构遵循 ZCode 官方市场布局：
+`npm run build` 会构建完整的 `dist/` 输出：外层是插件市场壳，内层插件目录与
+ZCode 官方模板（`zcode-plugins-official`）布局一致：
 
 ```text
 dist/marketplace.json
 dist/plugins/zcode-plugin-langfuse/
+├── .zcode-plugin/plugin.json
+├── .claude-plugin/plugin.json        （同内容副本，兼容 Claude）
+├── hooks/hooks.json                  （指向 hooks/entry.mjs）
+├── hooks/entry.mjs                   （密封运行时 bundle）
+├── README.md
+├── README_CN.md
+├── LICENSE
+└── THIRD_PARTY_NOTICES.md
 ```
 
-`dist/plugins/zcode-plugin-langfuse/` 即可安装的插件：包含 `dist/hooks/entry.mjs`
-运行时、manifest、hooks、包元数据、双语 README、许可证与第三方声明。Release
-工作流负责把该目录压缩为版本化 ZIP；官方目录与本地目录安装直接使用这棵树。
+`dist/plugins/zcode-plugin-langfuse/` 即可安装的插件：包含 `hooks/entry.mjs`
+运行时、manifest、hooks、双语 README、许可证与第三方声明。Release
+工作流负责把该目录压缩为版本化 ZIP；官方目录与本地目录安装直接使用该插件目录。
 整个 `dist/` 均为生成目录，不入库。
 
 目录分层：

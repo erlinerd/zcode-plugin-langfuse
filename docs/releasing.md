@@ -51,9 +51,10 @@ zcode-plugin-langfuse-v0.2.1.zip.sha256
 The official ZCode marketplace catalog requires an in-tree source in the form
 `./plugins/<name>`. Use the generated
 `dist/plugins/zcode-plugin-langfuse/` directory (the `dist/` tree is itself a
-marketplace root) as the input for a separate reviewed catalog change. Do not
+marketplace shell) as the input for a separate reviewed catalog change. Do not
 replace this with a ZIP URL: the root
-`marketplace.json` remains a local-development catalog using `source: "."`.
+`marketplace.json` remains a local-development catalog pointing at
+`./dist/plugins/<name>`.
 Run `npm run build` before installing the local-development catalog.
 
 After publishing:

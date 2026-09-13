@@ -1,4 +1,4 @@
-import { cp, mkdir, rm } from "node:fs/promises";
+import { cp, mkdir, readFile, rm, writeFile } from "node:fs/promises";
 import { dirname, resolve } from "node:path";
 import { fileURLToPath } from "node:url";
 import { build } from "esbuild";
@@ -6,38 +6,60 @@ import { validatePluginRoot } from "./build-layout.mjs";
 
 const root = resolve(dirname(fileURLToPath(import.meta.url)), "..");
 const dist = resolve(root, "dist");
-const runtimeEntry = resolve(dist, "payload", "dist", "hooks", "entry.mjs");
 
-// dist/ is assembled as the official-layout plugin root:
-//   dist/.zcode-plugin/plugin.json
-//   dist/hooks/hooks.json          (points into payload/)
-//   dist/payload/dist/hooks/entry.mjs   (the sealed bundle, mimosa-style)
-//   dist/marketplace.json          (so the extracted dir is add-able as a market)
-//   dist/README.md, README_CN.md, LICENSE, THIRD_PARTY_NOTICES.md, package.json
+// dist/ is assembled as a ZCode marketplace shell whose single entry is the
+// official-layout plugin (same shape as the zcode-plugins-official template):
+//   dist/marketplace.json                       (source: ./plugins/<name>)
+//   dist/plugins/<name>/.zcode-plugin/plugin.json
+//   dist/plugins/<name>/.claude-plugin/plugin.json
+//   dist/plugins/<name>/hooks/hooks.json        (points at hooks/entry.mjs)
+//   dist/plugins/<name>/hooks/entry.mjs         (the sealed bundle)
+//   dist/plugins/<name>/README.md, README_CN.md, LICENSE, THIRD_PARTY_NOTICES.md
+// The release workflow zips dist/ as-is: extract -> add as marketplace.
+async function readJson(relativePath, label) {
+  try {
+    return JSON.parse(await readFile(resolve(root, relativePath), "utf8"));
+  } catch (error) {
+    const reason = error instanceof Error ? error.message : String(error);
+    throw new Error(`Unable to read ${label}: ${reason}`, { cause: error });
+  }
+}
+
+const manifest = await readJson(
+  ".zcode-plugin/plugin.json",
+  "plugin manifest",
+);
+const pluginDir = resolve(dist, "plugins", manifest.name);
+
 await rm(dist, { recursive: true, force: true });
 
 for (const relativePath of [
   ".zcode-plugin",
+  ".claude-plugin",
   "hooks",
   "README.md",
   "LICENSE",
   "THIRD_PARTY_NOTICES.md",
-  "package.json",
-  "marketplace.json",
 ]) {
-  await cp(resolve(root, relativePath), resolve(dist, relativePath), {
+  await cp(resolve(root, relativePath), resolve(pluginDir, relativePath), {
     recursive: true,
   });
 }
 
-await cp(resolve(root, "README.zh-CN.md"), resolve(dist, "README_CN.md"));
+await cp(resolve(root, "README.zh-CN.md"), resolve(pluginDir, "README_CN.md"));
 
-await mkdir(dirname(runtimeEntry), { recursive: true });
+const marketplace = await readJson("marketplace.json", "marketplace manifest");
+marketplace.plugins[0].source = `./plugins/${manifest.name}`;
+await mkdir(resolve(dist, "plugins"), { recursive: true });
+await writeFile(
+  resolve(dist, "marketplace.json"),
+  `${JSON.stringify(marketplace, null, 2)}\n`,
+);
 
 await build({
   absWorkingDir: root,
   entryPoints: ["src/hooks/entry.ts"],
-  outfile: `dist/payload/dist/hooks/entry.mjs`,
+  outfile: `dist/plugins/${manifest.name}/hooks/entry.mjs`,
   bundle: true,
   format: "esm",
   platform: "node",
@@ -52,5 +74,5 @@ await build({
 const layout = await validatePluginRoot(dist);
 
 process.stdout.write(
-  `Built ${layout.name}@${layout.version} → dist/ (official plugin layout)\n`,
+  `Built ${layout.name}@${layout.version} → dist/ (marketplace shell + official plugin layout)\n`,
 );

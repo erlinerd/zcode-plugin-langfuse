@@ -140,14 +140,13 @@ async function syncCatalog({
   );
   const entry = marketplace.plugins[0];
 
-  const pluginSourceRoot = resolvedLayoutRoot;
+  const pluginSourceRoot = validated.pluginRoot;
   const pluginTargetRoot = resolve(repoPath, "plugins", validated.name);
   const pluginPathspec = `plugins/${validated.name}`;
   const mirroredItems = [
     ".zcode-plugin",
+    ".claude-plugin",
     "hooks",
-    "payload",
-    "package.json",
     "README.md",
     "README_CN.md",
     "LICENSE",
@@ -252,28 +251,10 @@ async function syncCatalog({
     };
   }
 
-  const forkGitignorePath = resolve(repoPath, ".gitignore");
-  const whitelistLines = [
-    `!plugins/${validated.name}/payload/dist/`,
-    `!plugins/${validated.name}/payload/dist/**`,
-  ];
-  const gitignoreText = await readFile(forkGitignorePath, "utf8").catch(
-    () => "",
-  );
-  const missingLines = whitelistLines.filter(
-    (line) => !gitignoreText.includes(line),
-  );
-  if (missingLines.length > 0) {
-    await writeFile(
-      forkGitignorePath,
-      `${gitignoreText.trimEnd()}\n${missingLines.join("\n")}\n`,
-    );
-  }
-
   git(repoPath, ["add", "--force", "--", pluginPathspec]);
-  git(repoPath, ["add", "--", "marketplace.json", ".gitignore"]);
+  git(repoPath, ["add", "--", "marketplace.json"]);
 
-  const bundlePathspec = `${pluginPathspec}/payload/dist/hooks/entry.mjs`;
+  const bundlePathspec = `${pluginPathspec}/hooks/entry.mjs`;
   const trackedBundle = git(repoPath, [
     "ls-files",
     "--",
@@ -281,7 +262,7 @@ async function syncCatalog({
   ]).trim();
   assert(
     trackedBundle !== "",
-    `${bundlePathspec} is not tracked after staging. Catalog .gitignore rules ignore dist/; the sync must force-add the bundled entry (see the mimosa payload whitelist precedent).`,
+    `${bundlePathspec} is not tracked after staging. The sync must track the bundled entry in the catalog.`,
   );
   try {
     git(repoPath, ["commit", "-m", commitMessage]);
