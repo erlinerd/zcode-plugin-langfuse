@@ -22,7 +22,8 @@ by ZCode Hook stdin, never hidden chain-of-thought or transcript-file content.
    source and test diff implements the requested behavior.
 3. **Package.** If runtime source or manifests change, run
    `npm run package:plugin`. Keep versions synchronized in `package.json`,
-   `package-lock.json`, `.zcode-plugin/plugin.json`, and `marketplace.json`.
+   `package-lock.json`, `.zcode-plugin/plugin.json`, `.claude-plugin/plugin.json`,
+   and `marketplace.json`.
    Completion: the `dist/` marketplace tree is rebuilt and
    `npm run validate:artifact` reports success.
 4. **Verify.** Run the complete gate below and inspect the final diff for
