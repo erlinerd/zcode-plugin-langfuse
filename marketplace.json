@@ -6,7 +6,7 @@
       "name": "zcode-plugin-langfuse",
       "source": ".",
       "description": "Fail-open Langfuse tracing for ZCode sessions and tool calls.",
-      "version": "0.2.0",
+      "version": "0.2.1",
       "category": "observability",
       "tags": [
         "langfuse",

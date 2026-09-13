@@ -6,6 +6,9 @@ import { describe, expect, it } from "vitest";
 
 const repoRoot = fileURLToPath(new URL("..", import.meta.url));
 const npmCommand = process.platform === "win32" ? "npm.cmd" : "npm";
+const pluginManifest = JSON.parse(
+  readFileSync(join(repoRoot, ".zcode-plugin/plugin.json"), "utf8"),
+) as { name: string; version: string };
 const layoutRoot = join(repoRoot, "artifacts", "plugin-layout");
 const pluginLayoutRoot = join(layoutRoot, "plugins", "zcode-plugin-langfuse");
 
@@ -61,9 +64,9 @@ describe("unified plugin package", () => {
       category: string;
     };
     expect(entry).toMatchObject({
-      name: "zcode-plugin-langfuse",
-      source: "./plugins/zcode-plugin-langfuse",
-      version: "0.2.0",
+      name: pluginManifest.name,
+      source: `./plugins/${pluginManifest.name}`,
+      version: pluginManifest.version,
       category: "developer-tools",
     });
 

@@ -1,5 +1,5 @@
 import { execFileSync } from "node:child_process";
-import { existsSync } from "node:fs";
+import { existsSync, readFileSync } from "node:fs";
 import { cp, mkdtemp, mkdir, readFile, rm, writeFile } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
@@ -10,6 +10,9 @@ import { syncCatalog } from "../scripts/sync-catalog.mjs";
 
 const repoRoot = fileURLToPath(new URL("..", import.meta.url));
 const branch = "feat/langfuse-observability";
+const pluginManifest = JSON.parse(
+  readFileSync(join(repoRoot, ".zcode-plugin/plugin.json"), "utf8"),
+) as { name: string; version: string };
 const silentLog = () => {};
 
 function git(dir: string, args: string[]): string {
@@ -131,7 +134,7 @@ describe("sync-catalog", () => {
     });
     expect(result.commit).toMatch(/^[0-9a-f]+$/);
     expect(git(fork, ["log", "-1", "--format=%s"])).toBe(
-      "chore(catalog): sync zcode-plugin-langfuse v0.2.0",
+      `chore(catalog): sync ${pluginManifest.name} v${pluginManifest.version}`,
     );
     expect(
       existsSync(
@@ -145,7 +148,7 @@ describe("sync-catalog", () => {
     const entry = catalog.plugins.find(
       (candidate) => candidate.name === "zcode-plugin-langfuse",
     );
-    expect(entry?.version).toBe("0.2.0");
+    expect(entry?.version).toBe(pluginManifest.version);
     expect(catalog.plugins.some((p) => p.name === "other-plugin")).toBe(true);
     expect(git(fork, ["status", "--porcelain"])).toBe("");
   });

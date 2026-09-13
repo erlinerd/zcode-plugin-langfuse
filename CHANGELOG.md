@@ -9,6 +9,19 @@ The version must stay synchronized in `package.json`,
 
 ## [Unreleased]
 
+## [0.2.1] — 2026-09-13
+
+- Unified distribution: `npm run package:plugin` builds the release ZIP and a
+  catalog-ready plugin layout from a single bundle.
+- Added `sync-catalog` for idempotent plugin-catalog fork synchronization with
+  a `--dry-run` plan mode and tracked-file guards against ignored bundles.
+- Added tag-triggered `catalog-sync.yml` for automatic catalog
+  synchronization, independent from the Release workflow.
+- Hardened layout assembly with output-path containment and tracked-file
+  verification.
+
+## [0.2.0] — 2026-09-13
+
 - Improve repository governance, validation, and contribution documentation.
 - Switch distribution to CI-built ZIP artifacts with SHA-256 checksums.
 - Rename new Langfuse traces to `ZCode Turn`.
