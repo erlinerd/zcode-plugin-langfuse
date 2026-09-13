@@ -17,6 +17,7 @@
     "typecheck": "tsc --noEmit",
     "validate": "node scripts/validate.mjs",
     "validate:artifact": "node scripts/validate.mjs --artifact",
+    "sync:catalog": "node scripts/sync-catalog.mjs",
     "package:plugin": "npm run build && npm run validate && node scripts/package-plugin.mjs && npm run validate:artifact",
     "check": "npm run lint && npm run typecheck && npm test && npm run validate",
     "prepare": "husky && npm run build"

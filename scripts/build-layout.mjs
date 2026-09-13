@@ -39,7 +39,7 @@ function assert(condition, message) {
   if (!condition) throw new Error(message);
 }
 
-function isStrictChild(parent, child) {
+export function isStrictChild(parent, child) {
   const childRelative = relative(parent, child);
   return (
     childRelative !== "" &&

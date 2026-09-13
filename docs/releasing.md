@@ -65,3 +65,21 @@ After publishing:
 
 Do not include Langfuse credentials or real user content in release notes,
 artifacts, screenshots, or smoke-test fixtures.
+
+## Sync the catalog fork
+
+Push the catalog-ready layout to the `erlinerd/zcode-plugins` fork without
+manual copying:
+
+```bash
+npm run sync:catalog -- \
+  --repo /path/to/zcode-plugins \
+  --branch feat/langfuse-observability
+```
+
+The command validates the layout first, then mirrors `plugins/<name>`, updates
+the catalog entry in `marketplace.json`, and commits
+`chore(catalog): sync zcode-plugin-langfuse v<version>`. Add `--dry-run` to
+print the plan without writing anything, and `--push` to run
+`git push origin <branch>` after the commit. Re-running the same version is a
+no-op; a dirty fork or a missing branch stops with recovery guidance.

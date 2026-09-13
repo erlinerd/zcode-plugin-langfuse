@@ -18,11 +18,15 @@ function packagePlugin() {
 }
 
 function buildLayout(outputRoot: string) {
-  execFileSync(process.execPath, ["scripts/build-layout.mjs", "--output-root", outputRoot], {
-    cwd: repoRoot,
-    encoding: "utf8",
-    stdio: "pipe",
-  });
+  execFileSync(
+    process.execPath,
+    ["scripts/build-layout.mjs", "--output-root", outputRoot],
+    {
+      cwd: repoRoot,
+      encoding: "utf8",
+      stdio: "pipe",
+    },
+  );
 }
 
 describe("unified plugin package", () => {

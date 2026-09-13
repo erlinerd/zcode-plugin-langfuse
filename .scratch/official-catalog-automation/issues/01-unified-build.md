@@ -4,7 +4,7 @@
 
 **Blocked by:** None (can start immediately).
 
-**Status:** ready-for-agent
+**Status:** done
 
 - [x] 一次统一构建同时产出 Release ZIP 与插件市场布局，且不重复执行插件 bundle 构建
 - [x] 两份产物使用同一版本号、manifest 与生成内容，不允许版本或入口漂移

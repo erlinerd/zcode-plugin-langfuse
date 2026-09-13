@@ -1,0 +1,266 @@
+#!/usr/bin/env node
+import { execFileSync } from "node:child_process";
+import { existsSync } from "node:fs";
+import { cp, mkdir, readFile, readdir, rm, writeFile } from "node:fs/promises";
+import { isStrictChild, validatePluginLayout } from "./build-layout.mjs";
+import { dirname, relative, resolve } from "node:path";
+import { fileURLToPath } from "node:url";
+
+const root = resolve(dirname(fileURLToPath(import.meta.url)), "..");
+const defaultLayoutRoot = resolve(root, "artifacts/plugin-layout");
+const defaultBranch = "feat/langfuse-observability";
+
+function assert(condition, message) {
+  if (!condition) throw new Error(message);
+}
+
+function git(repoPath, args) {
+  try {
+    return execFileSync("git", args, {
+      cwd: repoPath,
+      encoding: "utf8",
+      stdio: ["ignore", "pipe", "pipe"],
+    });
+  } catch (error) {
+    const reason =
+      error instanceof Error ? error.message.split("\n").slice(0, 4).join(" ") : String(error);
+    throw new Error(`git ${args[0]} failed in ${repoPath}: ${reason}`, { cause: error });
+  }
+}
+
+async function countFiles(dirPath) {
+  let count = 0;
+  const pending = [dirPath];
+  while (pending.length > 0) {
+    const current = pending.pop();
+    const entries = await readdir(current, { withFileTypes: true });
+    for (const entry of entries) {
+      if (entry.isDirectory()) {
+        pending.push(resolve(current, entry.name));
+        continue;
+      }
+      if (entry.isFile()) count += 1;
+    }
+  }
+  return count;
+}
+
+async function readJson(filePath, label) {
+  try {
+    return JSON.parse(await readFile(filePath, "utf8"));
+  } catch (error) {
+    const reason = error instanceof Error ? error.message : String(error);
+    throw new Error(`Unable to read ${label}: ${reason}`, { cause: error });
+  }
+}
+
+async function assertSyncableRepo(repoPath, branch) {
+  assert(
+    existsSync(repoPath),
+    `Repository not found: ${repoPath}. Clone the fork first, e.g. gh repo clone erlinerd/zcode-plugins.`,
+  );
+  git(repoPath, ["rev-parse", "--is-inside-work-tree"]);
+
+  try {
+    execFileSync("git", ["rev-parse", "--verify", "--quiet", `refs/heads/${branch}`], {
+      cwd: repoPath,
+      stdio: ["ignore", "ignore", "ignore"],
+    });
+  } catch {
+    throw new Error(
+      `Branch ${branch} does not exist in ${repoPath}. Create it from the catalog default branch before syncing.`,
+    );
+  }
+
+  const status = git(repoPath, ["status", "--porcelain"]);
+  assert(
+    status.trim() === "",
+    `Working tree of ${repoPath} is not clean. Commit or stash local changes before syncing.`,
+  );
+}
+
+async function planCatalogChange(repoPath, pluginName, entry) {
+  const catalogPath = resolve(repoPath, "marketplace.json");
+  assert(
+    existsSync(catalogPath),
+    `marketplace.json not found in ${repoPath}. The target must be a zcode-plugins catalog checkout.`,
+  );
+  const catalog = await readJson(catalogPath, "catalog marketplace.json");
+  assert(
+    Array.isArray(catalog.plugins),
+    "catalog marketplace.json must contain a plugins array",
+  );
+  const existingIndex = catalog.plugins.findIndex(
+    (candidate) => candidate && candidate.name === pluginName,
+  );
+  const unchanged =
+    existingIndex >= 0 &&
+    JSON.stringify(catalog.plugins[existingIndex]) === JSON.stringify(entry);
+  return { catalogPath, catalog, existingIndex, unchanged };
+}
+
+async function syncCatalog({
+  layoutRoot = defaultLayoutRoot,
+  repo,
+  branch = defaultBranch,
+  dryRun = false,
+  push = false,
+  log = (line) => process.stderr.write(`${line}\n`),
+} = {}) {
+  const repoPath = resolve(repo);
+  const resolvedLayoutRoot = resolve(layoutRoot);
+
+  assert(
+    existsSync(resolvedLayoutRoot),
+    `Plugin layout not found: ${resolvedLayoutRoot}. Run npm run package:plugin first.`,
+  );
+  const validated = await validatePluginLayout({ outputRoot: resolvedLayoutRoot });
+  const entry = await readJson(
+    resolve(resolvedLayoutRoot, "marketplace-entry.json"),
+    "marketplace entry",
+  );
+
+  const pluginSourceRoot = resolve(resolvedLayoutRoot, "plugins", validated.name);
+  const pluginTargetRoot = resolve(repoPath, "plugins", validated.name);
+  assert(
+    isStrictChild(repoPath, pluginTargetRoot),
+    `Plugin target must stay inside the repository: ${pluginTargetRoot}`,
+  );
+
+  await assertSyncableRepo(repoPath, branch);
+  if (!dryRun) git(repoPath, ["checkout", branch]);
+
+  const catalogPlan = await planCatalogChange(repoPath, validated.name, entry);
+  const pluginFileCount = await countFiles(pluginSourceRoot);
+  const commitMessage = `chore(catalog): sync ${validated.name} v${validated.version}`;
+  const entryAction = catalogPlan.existingIndex >= 0 ? "replace entry" : "add entry";
+
+  log(`sync-catalog plan for ${validated.name}@${validated.version}`);
+  log(`  repo: ${repoPath}`);
+  log(`  branch: ${branch}`);
+  log(`  layout: ${resolvedLayoutRoot}`);
+  log(`  ${dryRun ? "would mirror" : "mirroring"}: plugins/${validated.name} (${pluginFileCount} files)`);
+  log(`  ${dryRun ? "would update" : "updating"}: ${relative(repoPath, catalogPlan.catalogPath) || "marketplace.json"} (${entryAction})`);
+  log(`  ${dryRun ? "would commit" : "committing"}: ${commitMessage}`);
+  log(`  ${dryRun ? "would push" : "pushing"}: ${push ? `origin ${branch}` : "skipped (--push not set)"}`);
+
+  if (dryRun) {
+    return {
+      plugin: validated.name,
+      version: validated.version,
+      repo: repoPath,
+      branch,
+      dryRun: true,
+      changed: null,
+      commit: null,
+      pushed: false,
+    };
+  }
+
+  await rm(pluginTargetRoot, { recursive: true, force: true });
+  await mkdir(pluginTargetRoot, { recursive: true });
+  await cp(pluginSourceRoot, pluginTargetRoot, { recursive: true });
+
+  if (!catalogPlan.unchanged) {
+    const { catalog, existingIndex } = catalogPlan;
+    if (existingIndex >= 0) {
+      catalog.plugins[existingIndex] = entry;
+    } else {
+      catalog.plugins.push(entry);
+    }
+    await writeFile(catalogPlan.catalogPath, `${JSON.stringify(catalog, null, 2)}\n`);
+  }
+
+  const status = git(repoPath, ["status", "--porcelain"]);
+  if (status.trim() === "") {
+    log(`  ${validated.name}@${validated.version} is already up to date; no commit created`);
+    return {
+      plugin: validated.name,
+      version: validated.version,
+      repo: repoPath,
+      branch,
+      dryRun: false,
+      changed: false,
+      commit: null,
+      pushed: false,
+    };
+  }
+
+  git(repoPath, ["add", "--", `plugins/${validated.name}`, "marketplace.json"]);
+  try {
+    git(repoPath, ["commit", "-m", commitMessage]);
+  } catch (error) {
+    throw new Error(
+      `git commit failed. Configure an identity in ${repoPath} (git config user.name / user.email) and rerun.`,
+      { cause: error },
+    );
+  }
+  const commit = git(repoPath, ["rev-parse", "--short", "HEAD"]).trim();
+
+  if (push) {
+    try {
+      execFileSync("git", ["push", "origin", branch], {
+        cwd: repoPath,
+        encoding: "utf8",
+        stdio: ["ignore", "pipe", "pipe"],
+      });
+    } catch (error) {
+      throw new Error(
+        `git push origin ${branch} failed. Check remote access: run 'gh auth status', verify the origin URL, or confirm CATALOG_SYNC_PAT has Contents write on the fork. The sync commit is already on ${branch}.`,
+        { cause: error },
+      );
+    }
+  }
+
+  log(`  committed ${commit}: ${commitMessage}${push ? ` and pushed to origin ${branch}` : ""}`);
+
+  return {
+    plugin: validated.name,
+    version: validated.version,
+    repo: repoPath,
+    branch,
+    dryRun: false,
+    changed: true,
+    commit,
+    pushed: push,
+  };
+}
+
+function optionValue(args, name, fallback) {
+  const index = args.indexOf(name);
+  if (index >= 0) {
+    const value = args[index + 1];
+    assert(value && !value.startsWith("--"), `${name} requires a value`);
+    return value;
+  }
+  const prefix = `${name}=`;
+  const inline = args.find((arg) => arg.startsWith(prefix));
+  return inline ? inline.slice(prefix.length) : fallback;
+}
+
+async function main() {
+  const args = process.argv.slice(2);
+  const result = await syncCatalog({
+    repo: optionValue(args, "--repo", undefined),
+    branch: optionValue(args, "--branch", defaultBranch),
+    layoutRoot: optionValue(args, "--layout", defaultLayoutRoot),
+    dryRun: args.includes("--dry-run"),
+    push: args.includes("--push"),
+  });
+  process.stdout.write(`${JSON.stringify(result)}\n`);
+}
+
+if (
+  process.argv[1] &&
+  resolve(process.argv[1]) === fileURLToPath(import.meta.url)
+) {
+  try {
+    await main();
+  } catch (error) {
+    const reason = error instanceof Error ? error.message : String(error);
+    process.stderr.write(`sync-catalog failed: ${reason}\n`);
+    process.exitCode = 1;
+  }
+}
+
+export { syncCatalog };
