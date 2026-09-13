@@ -23,8 +23,12 @@ function git(repoPath, args) {
     });
   } catch (error) {
     const reason =
-      error instanceof Error ? error.message.split("\n").slice(0, 4).join(" ") : String(error);
-    throw new Error(`git ${args[0]} failed in ${repoPath}: ${reason}`, { cause: error });
+      error instanceof Error
+        ? error.message.split("\n").slice(0, 4).join(" ")
+        : String(error);
+    throw new Error(`git ${args[0]} failed in ${repoPath}: ${reason}`, {
+      cause: error,
+    });
   }
 }
 
@@ -62,10 +66,14 @@ async function assertSyncableRepo(repoPath, branch) {
   git(repoPath, ["rev-parse", "--is-inside-work-tree"]);
 
   try {
-    execFileSync("git", ["rev-parse", "--verify", "--quiet", `refs/heads/${branch}`], {
-      cwd: repoPath,
-      stdio: ["ignore", "ignore", "ignore"],
-    });
+    execFileSync(
+      "git",
+      ["rev-parse", "--verify", "--quiet", `refs/heads/${branch}`],
+      {
+        cwd: repoPath,
+        stdio: ["ignore", "ignore", "ignore"],
+      },
+    );
   } catch {
     throw new Error(
       `Branch ${branch} does not exist in ${repoPath}. Create it from the catalog default branch before syncing.`,
@@ -114,13 +122,19 @@ async function syncCatalog({
     existsSync(resolvedLayoutRoot),
     `Plugin layout not found: ${resolvedLayoutRoot}. Run npm run package:plugin first.`,
   );
-  const validated = await validatePluginLayout({ outputRoot: resolvedLayoutRoot });
+  const validated = await validatePluginLayout({
+    outputRoot: resolvedLayoutRoot,
+  });
   const entry = await readJson(
     resolve(resolvedLayoutRoot, "marketplace-entry.json"),
     "marketplace entry",
   );
 
-  const pluginSourceRoot = resolve(resolvedLayoutRoot, "plugins", validated.name);
+  const pluginSourceRoot = resolve(
+    resolvedLayoutRoot,
+    "plugins",
+    validated.name,
+  );
   const pluginTargetRoot = resolve(repoPath, "plugins", validated.name);
   assert(
     isStrictChild(repoPath, pluginTargetRoot),
@@ -133,16 +147,23 @@ async function syncCatalog({
   const catalogPlan = await planCatalogChange(repoPath, validated.name, entry);
   const pluginFileCount = await countFiles(pluginSourceRoot);
   const commitMessage = `chore(catalog): sync ${validated.name} v${validated.version}`;
-  const entryAction = catalogPlan.existingIndex >= 0 ? "replace entry" : "add entry";
+  const entryAction =
+    catalogPlan.existingIndex >= 0 ? "replace entry" : "add entry";
 
   log(`sync-catalog plan for ${validated.name}@${validated.version}`);
   log(`  repo: ${repoPath}`);
   log(`  branch: ${branch}`);
   log(`  layout: ${resolvedLayoutRoot}`);
-  log(`  ${dryRun ? "would mirror" : "mirroring"}: plugins/${validated.name} (${pluginFileCount} files)`);
-  log(`  ${dryRun ? "would update" : "updating"}: ${relative(repoPath, catalogPlan.catalogPath) || "marketplace.json"} (${entryAction})`);
+  log(
+    `  ${dryRun ? "would mirror" : "mirroring"}: plugins/${validated.name} (${pluginFileCount} files)`,
+  );
+  log(
+    `  ${dryRun ? "would update" : "updating"}: ${relative(repoPath, catalogPlan.catalogPath) || "marketplace.json"} (${entryAction})`,
+  );
   log(`  ${dryRun ? "would commit" : "committing"}: ${commitMessage}`);
-  log(`  ${dryRun ? "would push" : "pushing"}: ${push ? `origin ${branch}` : "skipped (--push not set)"}`);
+  log(
+    `  ${dryRun ? "would push" : "pushing"}: ${push ? `origin ${branch}` : "skipped (--push not set)"}`,
+  );
 
   if (dryRun) {
     return {
@@ -168,12 +189,17 @@ async function syncCatalog({
     } else {
       catalog.plugins.push(entry);
     }
-    await writeFile(catalogPlan.catalogPath, `${JSON.stringify(catalog, null, 2)}\n`);
+    await writeFile(
+      catalogPlan.catalogPath,
+      `${JSON.stringify(catalog, null, 2)}\n`,
+    );
   }
 
   const status = git(repoPath, ["status", "--porcelain"]);
   if (status.trim() === "") {
-    log(`  ${validated.name}@${validated.version} is already up to date; no commit created`);
+    log(
+      `  ${validated.name}@${validated.version} is already up to date; no commit created`,
+    );
     return {
       plugin: validated.name,
       version: validated.version,
@@ -186,7 +212,16 @@ async function syncCatalog({
     };
   }
 
-  git(repoPath, ["add", "--", `plugins/${validated.name}`, "marketplace.json"]);
+  const pluginPathspec = `plugins/${validated.name}`;
+  git(repoPath, ["add", "--force", "--", pluginPathspec]);
+  git(repoPath, ["add", "--", "marketplace.json"]);
+
+  const bundlePathspec = `${pluginPathspec}/dist/hooks/entry.mjs`;
+  const trackedBundle = git(repoPath, ["ls-files", "--", bundlePathspec]).trim();
+  assert(
+    trackedBundle !== "",
+    `${bundlePathspec} is not tracked after staging. Catalog .gitignore rules ignore dist/; the sync must force-add the bundled entry (see the mimosa payload whitelist precedent).`,
+  );
   try {
     git(repoPath, ["commit", "-m", commitMessage]);
   } catch (error) {
@@ -212,7 +247,9 @@ async function syncCatalog({
     }
   }
 
-  log(`  committed ${commit}: ${commitMessage}${push ? ` and pushed to origin ${branch}` : ""}`);
+  log(
+    `  committed ${commit}: ${commitMessage}${push ? ` and pushed to origin ${branch}` : ""}`,
+  );
 
   return {
     plugin: validated.name,

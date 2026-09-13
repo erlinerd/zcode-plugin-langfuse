@@ -89,7 +89,10 @@ describe("sync-catalog", () => {
     const layout = await makeLayout();
     const fork = await makeFork();
     const headBefore = git(fork, ["rev-parse", "HEAD"]);
-    const catalogBefore = await readFile(join(fork, "marketplace.json"), "utf8");
+    const catalogBefore = await readFile(
+      join(fork, "marketplace.json"),
+      "utf8",
+    );
 
     const result = await syncCatalog({
       layoutRoot: layout,
@@ -98,7 +101,11 @@ describe("sync-catalog", () => {
       log: silentLog,
     });
 
-    expect(result).toMatchObject({ dryRun: true, changed: null, pushed: false });
+    expect(result).toMatchObject({
+      dryRun: true,
+      changed: null,
+      pushed: false,
+    });
     expect(git(fork, ["rev-parse", "HEAD"])).toBe(headBefore);
     expect(git(fork, ["status", "--porcelain"])).toBe("");
     expect(existsSync(join(fork, "plugins/zcode-plugin-langfuse"))).toBe(false);
@@ -117,13 +124,19 @@ describe("sync-catalog", () => {
       log: silentLog,
     });
 
-    expect(result).toMatchObject({ dryRun: false, changed: true, pushed: false });
+    expect(result).toMatchObject({
+      dryRun: false,
+      changed: true,
+      pushed: false,
+    });
     expect(result.commit).toMatch(/^[0-9a-f]+$/);
     expect(git(fork, ["log", "-1", "--format=%s"])).toBe(
       "chore(catalog): sync zcode-plugin-langfuse v0.2.0",
     );
     expect(
-      existsSync(join(fork, "plugins/zcode-plugin-langfuse/dist/hooks/entry.mjs")),
+      existsSync(
+        join(fork, "plugins/zcode-plugin-langfuse/dist/hooks/entry.mjs"),
+      ),
     ).toBe(true);
 
     const catalog = JSON.parse(
@@ -135,6 +148,33 @@ describe("sync-catalog", () => {
     expect(entry?.version).toBe("0.2.0");
     expect(catalog.plugins.some((p) => p.name === "other-plugin")).toBe(true);
     expect(git(fork, ["status", "--porcelain"])).toBe("");
+  });
+
+  it("force-tracks the bundle even when the fork gitignores dist/", async () => {
+    const layout = await makeLayout();
+    const fork = await makeFork();
+    await writeFile(join(fork, ".gitignore"), "dist/\n");
+    git(fork, ["add", ".gitignore"]);
+    git(fork, ["commit", "-m", "ignore dist"]);
+
+    const result = await syncCatalog({
+      layoutRoot: layout,
+      repo: fork,
+      log: silentLog,
+    });
+
+    expect(result).toMatchObject({ changed: true });
+    const trackedBundle = git(fork, [
+      "ls-files",
+      "--",
+      "plugins/zcode-plugin-langfuse/dist/hooks/entry.mjs",
+    ]).trim();
+    expect(trackedBundle).toBe(
+      "plugins/zcode-plugin-langfuse/dist/hooks/entry.mjs",
+    );
+    expect(git(fork, ["show", "--stat", "--format=", "HEAD"])).toContain(
+      "plugins/zcode-plugin-langfuse/dist/hooks/entry.mjs",
+    );
   });
 
   it("is a no-op when the fork already matches the layout", async () => {
@@ -166,7 +206,10 @@ describe("sync-catalog", () => {
 
   it("refuses a missing layout before touching the fork", async () => {
     const fork = await makeFork();
-    const missingLayout = join(await tempDir("zcode-sync-empty-"), "plugin-layout");
+    const missingLayout = join(
+      await tempDir("zcode-sync-empty-"),
+      "plugin-layout",
+    );
 
     await expect(
       syncCatalog({ layoutRoot: missingLayout, repo: fork, log: silentLog }),
