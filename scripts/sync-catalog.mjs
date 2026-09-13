@@ -3,7 +3,7 @@ import { execFileSync } from "node:child_process";
 import { existsSync } from "node:fs";
 import { cp, mkdir, readFile, readdir, rm, writeFile } from "node:fs/promises";
 import { isStrictChild, validatePluginLayout } from "./build-layout.mjs";
-import { dirname, relative, resolve } from "node:path";
+import { dirname, relative, resolve, sep } from "node:path";
 import { fileURLToPath } from "node:url";
 
 const root = resolve(dirname(fileURLToPath(import.meta.url)), "..");
@@ -32,21 +32,24 @@ function git(repoPath, args) {
   }
 }
 
-async function countFiles(dirPath) {
-  let count = 0;
+async function listRelativeFiles(dirPath) {
+  const files = [];
   const pending = [dirPath];
   while (pending.length > 0) {
     const current = pending.pop();
     const entries = await readdir(current, { withFileTypes: true });
     for (const entry of entries) {
+      const entryPath = resolve(current, entry.name);
       if (entry.isDirectory()) {
-        pending.push(resolve(current, entry.name));
+        pending.push(entryPath);
         continue;
       }
-      if (entry.isFile()) count += 1;
+      if (entry.isFile()) {
+        files.push(relative(dirPath, entryPath).split(sep).join("/"));
+      }
     }
   }
-  return count;
+  return files;
 }
 
 async function readJson(filePath, label) {
@@ -136,6 +139,7 @@ async function syncCatalog({
     validated.name,
   );
   const pluginTargetRoot = resolve(repoPath, "plugins", validated.name);
+  const pluginPathspec = `plugins/${validated.name}`;
   assert(
     isStrictChild(repoPath, pluginTargetRoot),
     `Plugin target must stay inside the repository: ${pluginTargetRoot}`,
@@ -145,7 +149,7 @@ async function syncCatalog({
   if (!dryRun) git(repoPath, ["checkout", branch]);
 
   const catalogPlan = await planCatalogChange(repoPath, validated.name, entry);
-  const pluginFileCount = await countFiles(pluginSourceRoot);
+  const pluginFileCount = (await listRelativeFiles(pluginSourceRoot)).length;
   const commitMessage = `chore(catalog): sync ${validated.name} v${validated.version}`;
   const entryAction =
     catalogPlan.existingIndex >= 0 ? "replace entry" : "add entry";
@@ -196,7 +200,17 @@ async function syncCatalog({
   }
 
   const status = git(repoPath, ["status", "--porcelain"]);
-  if (status.trim() === "") {
+  const layoutFiles = await listRelativeFiles(pluginTargetRoot);
+  const tracked = new Set(
+    git(repoPath, ["ls-files", "--", pluginPathspec])
+      .split("\n")
+      .map((line) => line.trim())
+      .filter(Boolean),
+  );
+  const untrackedLayoutFiles = layoutFiles.filter(
+    (file) => !tracked.has(`${pluginPathspec}/${file}`),
+  );
+  if (status.trim() === "" && untrackedLayoutFiles.length === 0) {
     log(
       `  ${validated.name}@${validated.version} is already up to date; no commit created`,
     );
@@ -212,7 +226,6 @@ async function syncCatalog({
     };
   }
 
-  const pluginPathspec = `plugins/${validated.name}`;
   git(repoPath, ["add", "--force", "--", pluginPathspec]);
   git(repoPath, ["add", "--", "marketplace.json"]);
 

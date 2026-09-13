@@ -177,6 +177,38 @@ describe("sync-catalog", () => {
     );
   });
 
+  it("re-adds layout files whose tracking was lost in the fork", async () => {
+    const layout = await makeLayout();
+    const fork = await makeFork();
+    await writeFile(join(fork, ".gitignore"), "dist/\n");
+    git(fork, ["add", ".gitignore"]);
+    git(fork, ["commit", "-m", "ignore dist"]);
+    await syncCatalog({ layoutRoot: layout, repo: fork, log: silentLog });
+
+    git(fork, [
+      "rm",
+      "-q",
+      "--cached",
+      "plugins/zcode-plugin-langfuse/dist/hooks/entry.mjs",
+    ]);
+    git(fork, ["commit", "-m", "drop bundle from index"]);
+
+    const result = await syncCatalog({
+      layoutRoot: layout,
+      repo: fork,
+      log: silentLog,
+    });
+
+    expect(result).toMatchObject({ changed: true });
+    expect(
+      git(fork, [
+        "ls-files",
+        "--",
+        "plugins/zcode-plugin-langfuse/dist/hooks/entry.mjs",
+      ]).trim(),
+    ).toBe("plugins/zcode-plugin-langfuse/dist/hooks/entry.mjs");
+  });
+
   it("is a no-op when the fork already matches the layout", async () => {
     const layout = await makeLayout();
     const fork = await makeFork();
