@@ -61,6 +61,6 @@ Source code imports the official `langfuse` JavaScript SDK. `esbuild` bundles
 that SDK into `dist/hooks/entry.mjs`, because ZCode plugin installation does not
 promise a runtime `npm install`. `scripts/package-plugin.mjs` stages the
 manifests, Hook declaration, bundle, and source map into a versioned ZIP for
-release. `dist/` and `artifacts/` are generated locally and are not committed;
+release. `dist/` is generated locally and is not committed;
 CI verifies the ZIP checksum. `npm run validate` checks source manifests and
 `npm run validate:artifact` checks the generated bundle.

@@ -22,7 +22,9 @@ function state(): SessionState {
 
 describe("JsonStateStore", () => {
   it("persists and clears session state without exposing the raw session id in the filename", async () => {
-    const directory = await mkdtemp(join(tmpdir(), "zcode-plugin-langfuse-state-"));
+    const directory = await mkdtemp(
+      join(tmpdir(), "zcode-plugin-langfuse-state-"),
+    );
     try {
       const store = new JsonStateStore(directory);
       await store.save(state());
@@ -38,7 +40,9 @@ describe("JsonStateStore", () => {
   });
 
   it("serializes updates through the per-session lock", async () => {
-    const directory = await mkdtemp(join(tmpdir(), "zcode-plugin-langfuse-lock-"));
+    const directory = await mkdtemp(
+      join(tmpdir(), "zcode-plugin-langfuse-lock-"),
+    );
     try {
       const store = new JsonStateStore(directory);
       let active = 0;

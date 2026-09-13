@@ -125,18 +125,17 @@ npm run package:plugin
 ```
 
 `npm run build` 会把官方 `langfuse` JavaScript SDK 打包进本地 `dist/`。
-`npm run package:plugin` 是默认的分发构建：只执行一次 bundle 构建，完成校验，
-并同时生成发行文件和可同步到插件市场的布局：
+`npm run build` 会构建完整的 `dist/` 输出，结构遵循 ZCode 官方市场布局：
 
 ```text
-zcode-plugin-langfuse-v0.2.1.zip
-zcode-plugin-langfuse-v0.2.1.zip.sha256
-artifacts/plugin-layout/plugins/zcode-plugin-langfuse/
-artifacts/plugin-layout/marketplace-entry.json
+dist/marketplace.json
+dist/plugins/zcode-plugin-langfuse/
 ```
 
-ZIP 和 plugin layout 使用同一个生成 bundle。ZIP 包含 ZCode manifest、Hook 声明、
-SDK bundle 和第三方声明。`dist/` 与 `artifacts/` 都是生成目录，不提交到源码仓库。
+`dist/plugins/zcode-plugin-langfuse/` 即可安装的插件：包含 `dist/hooks/entry.mjs`
+运行时、manifest、hooks、包元数据、双语 README、许可证与第三方声明。Release
+工作流负责把该目录压缩为版本化 ZIP；官方目录与本地目录安装直接使用这棵树。
+整个 `dist/` 均为生成目录，不入库。
 
 目录分层：
 

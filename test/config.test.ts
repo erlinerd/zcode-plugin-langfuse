@@ -93,7 +93,9 @@ describe("configuration", () => {
   });
 
   it("does not guess a persisted plugin without ZCODE_PLUGIN_ID", () => {
-    const directory = mkdtempSync(join(tmpdir(), "zcode-plugin-langfuse-config-"));
+    const directory = mkdtempSync(
+      join(tmpdir(), "zcode-plugin-langfuse-config-"),
+    );
     const configPath = join(directory, "config.json");
     writeFileSync(
       configPath,

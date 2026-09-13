@@ -22,28 +22,26 @@ outputs.
    npm ci
    npm run check
    npm run package:plugin
-   (cd artifacts && shasum -a 256 -c *.sha256)
    git diff --check
    ```
 
-5. Inspect both generated outputs. The ZIP should contain only the plugin
+5. Inspect the generated `dist/` marketplace tree. It should contain the plugin
    manifest, Hook declaration, bundled runtime, third-party notices, and the
-   marketplace manifest (so the extracted directory can be added directly as
-   a local marketplace). The catalog-ready layout should contain the same
-   bundle plus its manifests, documentation, license, and marketplace entry.
-   Neither output may contain credentials, prompts, transcripts, or local state.
+   marketplace manifest. It must not contain credentials, prompts, transcripts,
+   or local state.
 6. Open a pull request and wait for every CI matrix job to pass.
 
-`dist/` and `artifacts/` are generated directories. They are intentionally
-ignored by Git and must not be added to a source pull request. The catalog-ready
-layout is under `artifacts/plugin-layout/` and is the input for a reviewed
-marketplace synchronization.
+Everything under `dist/` is generated. It is intentionally ignored by Git and
+must not be added to a source pull request; `dist/` itself is both the local
+marketplace directory and the input for the reviewed marketplace
+synchronization.
 
 ## Publish
 
 Pushing an annotated tag such as `v0.2.0` runs `.github/workflows/release.yml`.
-That workflow runs the unified package build and uploads these release assets,
-named `<plugin>-v<version>.zip` plus its `.sha256` checksum:
+That workflow runs the unified package build, compresses the `dist/`
+marketplace tree, and uploads the release assets, named
+`<plugin>-v<version>.zip` plus its `.sha256` checksum:
 
 ```text
 zcode-plugin-langfuse-v0.2.1.zip
@@ -52,9 +50,9 @@ zcode-plugin-langfuse-v0.2.1.zip.sha256
 
 The official ZCode marketplace catalog requires an in-tree source in the form
 `./plugins/<name>`. Use the generated
-`artifacts/plugin-layout/plugins/zcode-plugin-langfuse/` directory and
-`artifacts/plugin-layout/marketplace-entry.json` as the inputs for a separate
-reviewed catalog change. Do not replace this with a ZIP URL: the root
+`dist/plugins/zcode-plugin-langfuse/` directory (the `dist/` tree is itself a
+marketplace root) as the input for a separate reviewed catalog change. Do not
+replace this with a ZIP URL: the root
 `marketplace.json` remains a local-development catalog using `source: "."`.
 Run `npm run build` before installing the local-development catalog.
 

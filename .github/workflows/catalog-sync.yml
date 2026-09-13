@@ -31,9 +31,8 @@ jobs:
           node-version: 20
       - run: npm ci
       - run: npm run package:plugin
-      - name: Verify package checksum
-        working-directory: artifacts
-        run: shasum -a 256 -c plugin.zip.sha256
+      - name: Validate the plugin layout
+        run: npm run validate:artifact
       - name: Clone catalog fork
         env:
           CATALOG_SYNC_PAT: ${{ secrets.CATALOG_SYNC_PAT }}

@@ -32,7 +32,10 @@ const plugin = readJson(".zcode-plugin/plugin.json");
 const marketplace = readJson("marketplace.json");
 const hooks = readJson("hooks/hooks.json");
 const builtEntry = artifactMode
-  ? fs.readFileSync(path.join(root, "dist/hooks/entry.mjs"), "utf8")
+  ? fs.readFileSync(
+      path.join(root, "dist/plugins", plugin.name, "dist/hooks/entry.mjs"),
+      "utf8",
+    )
   : null;
 
 assert(packageJson.private === true, "package.json must remain private");
@@ -102,7 +105,7 @@ const textFiles = [
   "marketplace.json",
 ];
 if (artifactMode) {
-  textFiles.push("dist/hooks/entry.mjs");
+  textFiles.push(`dist/plugins/${plugin.name}/dist/hooks/entry.mjs`);
 }
 const credentialPattern = /(?:pk|sk)-lf-[A-Za-z0-9_-]{12,}/;
 for (const relativePath of textFiles) {

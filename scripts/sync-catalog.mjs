@@ -7,7 +7,7 @@ import { dirname, relative, resolve, sep } from "node:path";
 import { fileURLToPath } from "node:url";
 
 const root = resolve(dirname(fileURLToPath(import.meta.url)), "..");
-const defaultLayoutRoot = resolve(root, "artifacts/plugin-layout");
+const defaultLayoutRoot = resolve(root, "dist");
 const defaultBranch = "feat/langfuse-observability";
 
 function assert(condition, message) {
@@ -128,10 +128,11 @@ async function syncCatalog({
   const validated = await validatePluginLayout({
     outputRoot: resolvedLayoutRoot,
   });
-  const entry = await readJson(
-    resolve(resolvedLayoutRoot, "marketplace-entry.json"),
-    "marketplace entry",
+  const marketplace = await readJson(
+    resolve(resolvedLayoutRoot, "marketplace.json"),
+    "marketplace manifest",
   );
+  const entry = marketplace.plugins[0];
 
   const pluginSourceRoot = resolve(
     resolvedLayoutRoot,

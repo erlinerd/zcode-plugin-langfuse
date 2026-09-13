@@ -14,7 +14,7 @@ npm run package:plugin
 git diff --check
 ```
 
-`dist/` and `artifacts/` are generated release directories and are ignored by
+`dist/` is the generated release directory and is ignored by
 Git. Source changes that affect the runtime must pass
 `npm run package:plugin`; the CI workflow builds the bundle, creates the ZIP,
 and verifies its SHA-256 checksum. Linting uses Oxlint; run `npm run lint` or
@@ -55,7 +55,7 @@ Before requesting review:
 
 - add or update tests for behavior changes;
 - run `npm run check` and `npm run package:plugin`;
-- verify the versioned ZIP under `artifacts/` with its `.sha256` file;
+- Releases attach the versioned ZIP packaged by CI from `dist/`;
 - inspect `git diff --check` and the package contents;
 - remove credentials and private data from commits, logs, and fixtures.
 

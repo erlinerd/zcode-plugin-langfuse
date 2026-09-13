@@ -29,7 +29,7 @@
 仓库① 源码仓库 zcode-plugin-langfuse
       TS + 官方 SDK + esbuild → npm run package:plugin
       ├─ Release ZIP（自成分发通道）
-      └─ artifacts/plugin-layout/（插件市场同步输入）
+      └─ dist/（ZCode 市场树：本地安装 + 官方目录同步输入）
 仓库② fork erlinerd/zcode-plugins（分支 feat/langfuse-observability）
       plugin layout → PR zai-org/zcode-plugins#11
 ```

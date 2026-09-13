@@ -64,6 +64,7 @@ test-results/
 .zcode-plugin-data/
 
 # Generated build and release artifacts
-# The release ZIP contains dist/; neither is source-controlled.
+# Everything under dist/ is generated and not source-controlled.
 dist/
-artifacts/
+/*.zip
+/*.zip.sha256

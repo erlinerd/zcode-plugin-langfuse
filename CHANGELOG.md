@@ -9,6 +9,10 @@ The version must stay synchronized in `package.json`,
 
 ## [Unreleased]
 
+- All generated outputs now live under `dist/`, structured as a ZCode
+  marketplace root; release ZIPs are packaged by the release workflow instead
+  of local packaging.
+
 ## [0.2.1] — 2026-09-13
 
 - Unified distribution: `npm run package:plugin` builds the release ZIP and a
