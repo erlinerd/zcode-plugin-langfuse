@@ -1,8 +1,16 @@
 #!/usr/bin/env node
 import { execFileSync } from "node:child_process";
 import { existsSync } from "node:fs";
-import { cp, mkdir, readFile, readdir, rm, writeFile } from "node:fs/promises";
-import { isStrictChild, validatePluginLayout } from "./build-layout.mjs";
+import {
+  cp,
+  lstat,
+  mkdir,
+  readFile,
+  readdir,
+  rm,
+  writeFile,
+} from "node:fs/promises";
+import { isStrictChild, validatePluginRoot } from "./build-layout.mjs";
 import { dirname, relative, resolve, sep } from "node:path";
 import { fileURLToPath } from "node:url";
 
@@ -125,22 +133,26 @@ async function syncCatalog({
     existsSync(resolvedLayoutRoot),
     `Plugin layout not found: ${resolvedLayoutRoot}. Run npm run package:plugin first.`,
   );
-  const validated = await validatePluginLayout({
-    outputRoot: resolvedLayoutRoot,
-  });
+  const validated = await validatePluginRoot(resolvedLayoutRoot);
   const marketplace = await readJson(
     resolve(resolvedLayoutRoot, "marketplace.json"),
     "marketplace manifest",
   );
   const entry = marketplace.plugins[0];
 
-  const pluginSourceRoot = resolve(
-    resolvedLayoutRoot,
-    "plugins",
-    validated.name,
-  );
+  const pluginSourceRoot = resolvedLayoutRoot;
   const pluginTargetRoot = resolve(repoPath, "plugins", validated.name);
   const pluginPathspec = `plugins/${validated.name}`;
+  const mirroredItems = [
+    ".zcode-plugin",
+    "hooks",
+    "payload",
+    "package.json",
+    "README.md",
+    "README_CN.md",
+    "LICENSE",
+    "THIRD_PARTY_NOTICES.md",
+  ];
   assert(
     isStrictChild(repoPath, pluginTargetRoot),
     `Plugin target must stay inside the repository: ${pluginTargetRoot}`,
@@ -150,7 +162,16 @@ async function syncCatalog({
   if (!dryRun) git(repoPath, ["checkout", branch]);
 
   const catalogPlan = await planCatalogChange(repoPath, validated.name, entry);
-  const pluginFileCount = (await listRelativeFiles(pluginSourceRoot)).length;
+  let pluginFileCount = 0;
+  for (const item of mirroredItems) {
+    const itemPath = resolve(pluginSourceRoot, item);
+    const stats = await lstat(itemPath).catch(() => null);
+    if (stats?.isDirectory()) {
+      pluginFileCount += (await listRelativeFiles(itemPath)).length;
+    } else if (stats?.isFile()) {
+      pluginFileCount += 1;
+    }
+  }
   const commitMessage = `chore(catalog): sync ${validated.name} v${validated.version}`;
   const entryAction =
     catalogPlan.existingIndex >= 0 ? "replace entry" : "add entry";
@@ -185,7 +206,11 @@ async function syncCatalog({
 
   await rm(pluginTargetRoot, { recursive: true, force: true });
   await mkdir(pluginTargetRoot, { recursive: true });
-  await cp(pluginSourceRoot, pluginTargetRoot, { recursive: true });
+  for (const item of mirroredItems) {
+    await cp(resolve(pluginSourceRoot, item), resolve(pluginTargetRoot, item), {
+      recursive: true,
+    });
+  }
 
   if (!catalogPlan.unchanged) {
     const { catalog, existingIndex } = catalogPlan;
@@ -227,10 +252,28 @@ async function syncCatalog({
     };
   }
 
-  git(repoPath, ["add", "--force", "--", pluginPathspec]);
-  git(repoPath, ["add", "--", "marketplace.json"]);
+  const forkGitignorePath = resolve(repoPath, ".gitignore");
+  const whitelistLines = [
+    `!plugins/${validated.name}/payload/dist/`,
+    `!plugins/${validated.name}/payload/dist/**`,
+  ];
+  const gitignoreText = await readFile(forkGitignorePath, "utf8").catch(
+    () => "",
+  );
+  const missingLines = whitelistLines.filter(
+    (line) => !gitignoreText.includes(line),
+  );
+  if (missingLines.length > 0) {
+    await writeFile(
+      forkGitignorePath,
+      `${gitignoreText.trimEnd()}\n${missingLines.join("\n")}\n`,
+    );
+  }
 
-  const bundlePathspec = `${pluginPathspec}/dist/hooks/entry.mjs`;
+  git(repoPath, ["add", "--force", "--", pluginPathspec]);
+  git(repoPath, ["add", "--", "marketplace.json", ".gitignore"]);
+
+  const bundlePathspec = `${pluginPathspec}/payload/dist/hooks/entry.mjs`;
   const trackedBundle = git(repoPath, [
     "ls-files",
     "--",

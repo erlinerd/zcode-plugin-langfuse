@@ -63,7 +63,7 @@ test-results/
 !.codegraph/.gitignore
 .zcode-plugin-data/
 
-# Generated build and release artifacts
+# Generated build output (the installable plugin, official layout)
 # Everything under dist/ is generated and not source-controlled.
 dist/
 /*.zip

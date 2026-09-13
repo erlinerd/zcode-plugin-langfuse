@@ -5,7 +5,6 @@ import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { fileURLToPath } from "node:url";
 import { describe, expect, it, onTestFinished } from "vitest";
-import { assemblePluginLayout } from "../scripts/build-layout.mjs";
 import { syncCatalog } from "../scripts/sync-catalog.mjs";
 
 const repoRoot = fileURLToPath(new URL("..", import.meta.url));
@@ -26,26 +25,24 @@ async function tempDir(prefix: string): Promise<string> {
 }
 
 async function makeLayout(): Promise<string> {
-  const sourceRoot = await tempDir("zcode-sync-src-");
+  const outputRoot = await tempDir("zcode-sync-dist-");
   for (const relativePath of [
     ".zcode-plugin/plugin.json",
     "hooks/hooks.json",
+    "marketplace.json",
     "README.md",
-    "README.zh-CN.md",
     "LICENSE",
     "THIRD_PARTY_NOTICES.md",
     "package.json",
   ]) {
-    const destination = join(sourceRoot, relativePath);
+    const destination = join(outputRoot, relativePath);
     await mkdir(join(destination, ".."), { recursive: true });
     await cp(join(repoRoot, relativePath), destination);
   }
-  const outputRoot = join(sourceRoot, "dist");
-  await assemblePluginLayout({ sourceRoot, outputRoot });
+  await cp(join(repoRoot, "README.zh-CN.md"), join(outputRoot, "README_CN.md"));
   const runtimeEntry = join(
     outputRoot,
-    "plugins",
-    "zcode-plugin-langfuse",
+    "payload",
     "dist",
     "hooks",
     "entry.mjs",
@@ -144,7 +141,10 @@ describe("sync-catalog", () => {
     );
     expect(
       existsSync(
-        join(fork, "plugins/zcode-plugin-langfuse/dist/hooks/entry.mjs"),
+        join(
+          fork,
+          "plugins/zcode-plugin-langfuse/payload/dist/hooks/entry.mjs",
+        ),
       ),
     ).toBe(true);
 
@@ -176,13 +176,13 @@ describe("sync-catalog", () => {
     const trackedBundle = git(fork, [
       "ls-files",
       "--",
-      "plugins/zcode-plugin-langfuse/dist/hooks/entry.mjs",
+      "plugins/zcode-plugin-langfuse/payload/dist/hooks/entry.mjs",
     ]).trim();
     expect(trackedBundle).toBe(
-      "plugins/zcode-plugin-langfuse/dist/hooks/entry.mjs",
+      "plugins/zcode-plugin-langfuse/payload/dist/hooks/entry.mjs",
     );
-    expect(git(fork, ["show", "--stat", "--format=", "HEAD"])).toContain(
-      "plugins/zcode-plugin-langfuse/dist/hooks/entry.mjs",
+    expect(git(fork, ["show", "--name-only", "--format=", "HEAD"])).toContain(
+      "plugins/zcode-plugin-langfuse/payload/dist/hooks/entry.mjs",
     );
   });
 
@@ -198,9 +198,12 @@ describe("sync-catalog", () => {
       "rm",
       "-q",
       "--cached",
-      "plugins/zcode-plugin-langfuse/dist/hooks/entry.mjs",
+      "plugins/zcode-plugin-langfuse/payload/dist/hooks/entry.mjs",
     ]);
     git(fork, ["commit", "-m", "drop bundle from index"]);
+    await writeFile(join(fork, ".gitignore"), "dist/\n");
+    git(fork, ["add", ".gitignore"]);
+    git(fork, ["commit", "-m", "drop whitelist too"]);
 
     const result = await syncCatalog({
       layoutRoot: layout,
@@ -213,9 +216,9 @@ describe("sync-catalog", () => {
       git(fork, [
         "ls-files",
         "--",
-        "plugins/zcode-plugin-langfuse/dist/hooks/entry.mjs",
+        "plugins/zcode-plugin-langfuse/payload/dist/hooks/entry.mjs",
       ]).trim(),
-    ).toBe("plugins/zcode-plugin-langfuse/dist/hooks/entry.mjs");
+    ).toBe("plugins/zcode-plugin-langfuse/payload/dist/hooks/entry.mjs");
   });
 
   it("is a no-op when the fork already matches the layout", async () => {

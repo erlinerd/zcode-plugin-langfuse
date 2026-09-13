@@ -1,33 +1,43 @@
-import { mkdir, rm } from "node:fs/promises";
+import { cp, mkdir, rm } from "node:fs/promises";
 import { dirname, resolve } from "node:path";
 import { fileURLToPath } from "node:url";
 import { build } from "esbuild";
-import { assemblePluginLayout, validatePluginLayout } from "./build-layout.mjs";
+import { validatePluginRoot } from "./build-layout.mjs";
 
 const root = resolve(dirname(fileURLToPath(import.meta.url)), "..");
 const dist = resolve(root, "dist");
+const runtimeEntry = resolve(dist, "payload", "dist", "hooks", "entry.mjs");
 
-// dist/ is structured as a ZCode marketplace root:
-//   dist/marketplace.json
-//   dist/plugins/<name>/…            (the installable plugin, incl. its own dist/)
+// dist/ is assembled as the official-layout plugin root:
+//   dist/.zcode-plugin/plugin.json
+//   dist/hooks/hooks.json          (points into payload/)
+//   dist/payload/dist/hooks/entry.mjs   (the sealed bundle, mimosa-style)
+//   dist/marketplace.json          (so the extracted dir is add-able as a market)
+//   dist/README.md, README_CN.md, LICENSE, THIRD_PARTY_NOTICES.md, package.json
 await rm(dist, { recursive: true, force: true });
-const layout = await assemblePluginLayout({
-  sourceRoot: root,
-  outputRoot: dist,
-});
 
-const runtimeEntry = resolve(
-  layout.pluginRoot,
-  "dist",
+for (const relativePath of [
+  ".zcode-plugin",
   "hooks",
-  "entry.mjs",
-);
-await mkdir(resolve(runtimeEntry, ".."), { recursive: true });
+  "README.md",
+  "LICENSE",
+  "THIRD_PARTY_NOTICES.md",
+  "package.json",
+  "marketplace.json",
+]) {
+  await cp(resolve(root, relativePath), resolve(dist, relativePath), {
+    recursive: true,
+  });
+}
+
+await cp(resolve(root, "README.zh-CN.md"), resolve(dist, "README_CN.md"));
+
+await mkdir(dirname(runtimeEntry), { recursive: true });
 
 await build({
   absWorkingDir: root,
   entryPoints: ["src/hooks/entry.ts"],
-  outfile: `dist/plugins/${layout.name}/dist/hooks/entry.mjs`,
+  outfile: `dist/payload/dist/hooks/entry.mjs`,
   bundle: true,
   format: "esm",
   platform: "node",
@@ -39,8 +49,8 @@ await build({
   },
 });
 
-await validatePluginLayout({ outputRoot: dist });
+const layout = await validatePluginRoot(dist);
 
 process.stdout.write(
-  `Built ${layout.name}@${layout.version} → dist/ (marketplace layout)\n`,
+  `Built ${layout.name}@${layout.version} → dist/ (official plugin layout)\n`,
 );
