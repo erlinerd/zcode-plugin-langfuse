@@ -4,7 +4,7 @@ import { join } from "node:path";
 import type { HookConfig } from "../domain/types.js";
 
 const DEFAULT_BASE_URL = "https://cloud.langfuse.com";
-const DEFAULT_RELEASE = "0.1.1";
+const DEFAULT_RELEASE = "0.2.3";
 const DEFAULT_MAX_CAPTURE_CHARS = 20_000;
 
 export type StoredOption = string | number | boolean;

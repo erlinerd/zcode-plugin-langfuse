@@ -6,7 +6,7 @@ A community ZCode plugin that sends one Langfuse trace per completed ZCode turn.
 It is designed for review and possible inclusion in the ZCode official plugin
 marketplace.
 
-> **Status:** early community contribution (`0.2.1`). The plugin is fail-open:
+> **Status:** early community contribution (`0.2.3`). The plugin is fail-open:
 > a missing credential, malformed hook payload, local state error, or Langfuse
 > request error must never block a ZCode session.
 

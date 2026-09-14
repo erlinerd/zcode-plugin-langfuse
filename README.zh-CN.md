@@ -5,7 +5,7 @@
 面向 ZCode 的社区 Langfuse 观测插件，按每个完成的 ZCode turn 生成一条
 Langfuse trace，目标是提交给 ZCode 官方插件市场。
 
-> 当前版本：`0.2.1`。插件遵循 **fail-open**：缺少凭据、Hook 输入损坏、本地
+> 当前版本：`0.2.3`。插件遵循 **fail-open**：缺少凭据、Hook 输入损坏、本地
 > 状态错误或 Langfuse 请求失败，都不能阻塞 ZCode 会话。
 
 ## 采集范围

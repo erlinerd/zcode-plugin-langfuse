@@ -8,6 +8,13 @@ The version must stay synchronized in `package.json`,
 `.zcode-plugin/plugin.json`, `.claude-plugin/plugin.json`, and
 `marketplace.json`.
 
+## [0.2.3] — 2026-09-14
+
+- Fixed Langfuse trace release metadata to follow the packaged plugin version
+  instead of the stale `0.1.1` default.
+- Added a regression test that compares the default release metadata with
+  `package.json`.
+
 ## [0.2.2] — 2026-09-14
 
 - Dist finalized as a marketplace shell (`marketplace.json` →
