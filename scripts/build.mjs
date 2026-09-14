@@ -25,10 +25,7 @@ async function readJson(relativePath, label) {
   }
 }
 
-const manifest = await readJson(
-  ".zcode-plugin/plugin.json",
-  "plugin manifest",
-);
+const manifest = await readJson(".zcode-plugin/plugin.json", "plugin manifest");
 const pluginDir = resolve(dist, "plugins", manifest.name);
 
 await rm(dist, { recursive: true, force: true });

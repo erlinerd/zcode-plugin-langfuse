@@ -144,12 +144,7 @@ describe("sync-catalog", () => {
       `chore(catalog): sync ${pluginManifest.name} v${pluginManifest.version}`,
     );
     expect(
-      existsSync(
-        join(
-          fork,
-          "plugins/zcode-plugin-langfuse/hooks/entry.mjs",
-        ),
-      ),
+      existsSync(join(fork, "plugins/zcode-plugin-langfuse/hooks/entry.mjs")),
     ).toBe(true);
 
     const catalog = JSON.parse(
@@ -182,9 +177,7 @@ describe("sync-catalog", () => {
       "--",
       "plugins/zcode-plugin-langfuse/hooks/entry.mjs",
     ]).trim();
-    expect(trackedBundle).toBe(
-      "plugins/zcode-plugin-langfuse/hooks/entry.mjs",
-    );
+    expect(trackedBundle).toBe("plugins/zcode-plugin-langfuse/hooks/entry.mjs");
     expect(git(fork, ["show", "--name-only", "--format=", "HEAD"])).toContain(
       "plugins/zcode-plugin-langfuse/hooks/entry.mjs",
     );
