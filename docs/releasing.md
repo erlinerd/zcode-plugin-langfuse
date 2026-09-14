@@ -9,10 +9,11 @@ outputs.
 ## Prepare a release
 
 1. Create a release branch from the default branch.
-2. Choose a SemVer version and update it in all four locations:
+2. Choose a SemVer version and update it in all five locations:
    - `package.json`
    - `package-lock.json`
    - `.zcode-plugin/plugin.json`
+   - `.claude-plugin/plugin.json`
    - `marketplace.json`
 3. Update `CHANGELOG.md` by moving the relevant `Unreleased` entries into a
    dated release section.

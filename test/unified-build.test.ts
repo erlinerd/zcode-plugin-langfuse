@@ -95,19 +95,15 @@ describe("unified plugin package", () => {
       }
       env.ZCODE_PLUGIN_DATA = dataDir;
       env.ZCODE_CONFIG_PATH = join(dataDir, "no-config.json");
-      const stdout = execFileSync(
-        process.execPath,
-        [runtimeEntry],
-        {
-          input: `${JSON.stringify({
-            hook_event_name: "Stop",
-            session_id: "vitest-smoke",
-            last_assistant_message: "ok",
-          })}\n`,
-          env,
-          encoding: "utf8",
-        },
-      );
+      const stdout = execFileSync(process.execPath, [runtimeEntry], {
+        input: `${JSON.stringify({
+          hook_event_name: "Stop",
+          session_id: "vitest-smoke",
+          last_assistant_message: "ok",
+        })}\n`,
+        env,
+        encoding: "utf8",
+      });
       expect(JSON.parse(stdout)).toEqual({});
       expect(readdirSync(dataDir, { recursive: true })).toEqual([]);
     } finally {
@@ -115,41 +111,52 @@ describe("unified plugin package", () => {
     }
   });
 
-  it.runIf(process.platform !== "win32")("packages the shell into the release zip shape", () => {
-    packagePlugin();
-    const zipDir = mkdtempSync(join(tmpdir(), "lf-zip-shape-"));
-    try {
-      const zipPath = join(zipDir, "release.zip");
-      execFileSync("zip", ["-r", "-X", zipPath, "marketplace.json", "plugins"], {
-        cwd: distRoot,
-      });
-      const names = execFileSync("unzip", ["-Z1", zipPath], {
-        encoding: "utf8",
-      })
-        .split("\n")
-        .filter((line) => line && !line.endsWith("/"))
-        .sort();
-      expect(names).toEqual(
-        [
-          "marketplace.json",
-          `plugins/${pluginManifest.name}/.claude-plugin/plugin.json`,
-          `plugins/${pluginManifest.name}/.zcode-plugin/plugin.json`,
-          `plugins/${pluginManifest.name}/LICENSE`,
-          `plugins/${pluginManifest.name}/README.md`,
-          `plugins/${pluginManifest.name}/README_CN.md`,
-          `plugins/${pluginManifest.name}/THIRD_PARTY_NOTICES.md`,
-          `plugins/${pluginManifest.name}/hooks/entry.mjs`,
-          `plugins/${pluginManifest.name}/hooks/hooks.json`,
-        ].sort(),
-      );
-      const shell = execFileSync("unzip", ["-p", zipPath, "marketplace.json"], {
-        encoding: "utf8",
-      });
-      expect(shell).toContain(`./plugins/${pluginManifest.name}`);
-    } finally {
-      rmSync(zipDir, { recursive: true, force: true });
-    }
-  });
+  it.runIf(process.platform !== "win32")(
+    "packages the shell into the release zip shape",
+    () => {
+      packagePlugin();
+      const zipDir = mkdtempSync(join(tmpdir(), "lf-zip-shape-"));
+      try {
+        const zipPath = join(zipDir, "release.zip");
+        execFileSync(
+          "zip",
+          ["-r", "-X", zipPath, "marketplace.json", "plugins"],
+          {
+            cwd: distRoot,
+          },
+        );
+        const names = execFileSync("unzip", ["-Z1", zipPath], {
+          encoding: "utf8",
+        })
+          .split("\n")
+          .filter((line) => line && !line.endsWith("/"))
+          .sort();
+        expect(names).toEqual(
+          [
+            "marketplace.json",
+            `plugins/${pluginManifest.name}/.claude-plugin/plugin.json`,
+            `plugins/${pluginManifest.name}/.zcode-plugin/plugin.json`,
+            `plugins/${pluginManifest.name}/LICENSE`,
+            `plugins/${pluginManifest.name}/README.md`,
+            `plugins/${pluginManifest.name}/README_CN.md`,
+            `plugins/${pluginManifest.name}/THIRD_PARTY_NOTICES.md`,
+            `plugins/${pluginManifest.name}/hooks/entry.mjs`,
+            `plugins/${pluginManifest.name}/hooks/hooks.json`,
+          ].sort(),
+        );
+        const shell = execFileSync(
+          "unzip",
+          ["-p", zipPath, "marketplace.json"],
+          {
+            encoding: "utf8",
+          },
+        );
+        expect(shell).toContain(`./plugins/${pluginManifest.name}`);
+      } finally {
+        rmSync(zipDir, { recursive: true, force: true });
+      }
+    },
+  );
 
   it("fails validation when the bundled entry is missing", async () => {
     packagePlugin();

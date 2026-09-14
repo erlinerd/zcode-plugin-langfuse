@@ -5,13 +5,23 @@ All notable changes to this project are documented here. The format follows
 [Semantic Versioning](https://semver.org/).
 
 The version must stay synchronized in `package.json`,
-`.zcode-plugin/plugin.json`, and `marketplace.json`.
+`.zcode-plugin/plugin.json`, `.claude-plugin/plugin.json`, and
+`marketplace.json`.
 
-## [Unreleased]
+## [0.2.2] — 2026-09-14
 
-- All generated outputs now live under `dist/`, structured as a ZCode
-  marketplace root; release ZIPs are packaged by the release workflow instead
-  of local packaging.
+- Dist finalized as a marketplace shell (`marketplace.json` →
+  `./plugins/<name>`) whose plugin directory matches the official template
+  layout: sealed bundle at `hooks/entry.mjs`, `.claude-plugin/plugin.json`
+  compatibility copy, dual-language README, license, and third-party notices.
+- Removed the `payload/` nesting and the artifact `package.json`; the release
+  ZIP command now matches the generated tree again.
+- Root `marketplace.json` points at `./dist/plugins/<name>`, so the repository
+  checkout itself can be added as a local marketplace after a build.
+- `sync-catalog` mirrors the official-layout plugin directory; the fork
+  `.gitignore` whitelist workaround is gone.
+- Tests: added bundle execution smoke (fail-open Stop hook, state cleanup) and
+  release ZIP shape coverage; 28 tests total.
 
 ## [0.2.1] — 2026-09-13
 
