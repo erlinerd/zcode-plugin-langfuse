@@ -73,6 +73,12 @@
       "type": "number",
       "default": 20000
     },
+    "max_media_chars": {
+      "title": "Maximum media characters",
+      "description": "Maximum characters per preserved image (base64 data URI) sent to Langfuse for upload and rendering. Images over this limit are replaced by an omission marker; 0 disables media preservation and upload entirely.",
+      "type": "number",
+      "default": 4000000
+    },
     "debug": {
       "title": "Debug diagnostics",
       "description": "Write non-sensitive lifecycle diagnostics to stderr. Disabled by default.",

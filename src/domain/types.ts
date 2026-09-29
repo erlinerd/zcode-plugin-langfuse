@@ -70,6 +70,7 @@ export interface CompletedTurn {
   startedAt: string;
   endedAt: string;
   tools: ToolCall[];
+  hasMedia: boolean;
 }
 
 export interface HookConfig {
@@ -84,6 +85,7 @@ export interface HookConfig {
   captureToolInputs: boolean;
   captureToolOutputs: boolean;
   maxCaptureChars: number;
+  maxMediaChars: number;
   debug: boolean;
 }
 

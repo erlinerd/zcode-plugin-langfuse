@@ -23,8 +23,12 @@ The version must stay synchronized in `package.json`,
   8 s flush and 5 s shutdown budget. Immediate mode exported one request per
   span, so tool-heavy turns overran the flush budget and silently dropped the
   root span and generation; a 40-tool regression test pins the fix.
-- Disabled media upload in the processor: capture flags and
-  `max_capture_chars` remain the only privacy levers.
+- Media capture is explicit and bounded: images arriving as `image` content
+  blocks or bare `img`/`image` base64 fields are preserved as whole data URIs
+  under a dedicated `max_media_chars` budget (default 4,000,000 characters,
+  `0` disables preservation and upload) and uploaded by the processor so they
+  render in the trace view; anything over budget becomes an omission marker.
+  Media-bearing turns get a larger 13 s flush budget.
 - Removed the `langfuse` dependency; the runtime now bundles `@langfuse/otel`
   5.11.1, `@langfuse/tracing` 5.11.1, and OpenTelemetry 2.x/0.222.x packages.
 

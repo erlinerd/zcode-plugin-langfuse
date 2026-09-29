@@ -86,6 +86,16 @@ LANGFUSE_CAPTURE_TOOL_OUTPUTS=false
 工具数量等结构化元数据。单字段默认最多采集 20000 个字符，可用
 `LANGFUSE_MAX_CAPTURE_CHARS` 调整。
 
+### 媒体采集
+
+Hook payload 里的图片（`image` content block，或 `img`/`image` 字段下的裸
+base64）会以完整 data URI 保留并上传到 Langfuse，在 trace 视图中渲染为图片
+而不是被截断的文本。媒体有独立预算 `LANGFUSE_MAX_MEDIA_CHARS`（默认
+`4000000` 字符，约每轮 3 MB），超限的媒体会被替换成 `[media … omitted]`
+标记；设为 `0` 可彻底关闭媒体保留与上传。注意媒体上传会把图片二进制单独
+请求发送到你的 Langfuse 服务器；上面的采集开关仍然决定所在 prompt 或工具
+payload 是否被采集。
+
 ## 第三方软件
 
 运行时使用 `@langfuse/otel` 5.11.1、`@langfuse/tracing` 5.11.1、

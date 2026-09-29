@@ -14,6 +14,9 @@ import type { CompletedTurn, HookConfig, TraceSink } from "../domain/types.js";
 const TRACE_NAME = "ZCode Turn";
 const BASE_TAGS = ["zcode", "zcode-hook"];
 const FLUSH_BUDGET_MS = 8_000;
+// Media uploads are extra round trips before the span export; still below the
+// 20 s Stop hook timeout when combined with the shutdown budget.
+const MEDIA_FLUSH_BUDGET_MS = 13_000;
 const SHUTDOWN_BUDGET_MS = 5_000;
 
 type ChatContent = { role: string; content: string };
@@ -71,17 +74,23 @@ export class LangfuseTraceSink implements TraceSink {
       baseUrl: this.config.baseUrl,
       environment: this.config.environment,
       release: this.config.release,
-      // Default batched mode plus the explicit forceFlush below collapses the
-      // whole turn into one OTLP request. Immediate mode exports spans one
-      // request at a time; a tool-heavy turn then overruns the flush budget
-      // and silently drops the tail (root span and generation).
-      exportMode: "batched",
-      // Capture flags and size limits above are the only privacy levers; the
-      // media upload path would add a second exfiltration route.
-      mediaUploadEnabled: false,
-      timeout: FLUSH_BUDGET_MS / 1000,
-      shouldExportSpan: ({ otelSpan }) => isLangfuseSpan(otelSpan),
-    });
+    // Default batched mode plus the explicit forceFlush below collapses the
+    // whole turn into one OTLP request. Immediate mode exports spans one
+    // request at a time; a tool-heavy turn then overruns the flush budget
+    // and silently drops the tail (root span and generation).
+    exportMode: "batched",
+    // Data URIs preserved under max_media_chars are detected and uploaded by
+    // the processor; zero disables both preservation and upload.
+    mediaUploadEnabled: this.config.maxMediaChars > 0,
+    // Capture flags and size limits above are the only privacy levers; the
+    // media path only ever sees content that already passed them.
+    timeout: FLUSH_BUDGET_MS / 1000,
+    shouldExportSpan: ({ otelSpan }) => isLangfuseSpan(otelSpan),
+  });
+  const flushBudgetMs =
+    turn.hasMedia && this.config.maxMediaChars > 0
+      ? MEDIA_FLUSH_BUDGET_MS
+      : FLUSH_BUDGET_MS;
     const baseOnStart = processor.onStart.bind(processor);
     processor.onStart = (span, parentContext) => {
       baseOnStart(span, parentContext);
@@ -141,7 +150,7 @@ export class LangfuseTraceSink implements TraceSink {
       root.update({ output: chatOutput(turn.assistantMessage) });
       root.end();
 
-      await withBudget(processor.forceFlush(), FLUSH_BUDGET_MS);
+      await withBudget(processor.forceFlush(), flushBudgetMs);
     } finally {
       setLangfuseTracerProvider(null);
       await withBudget(provider.shutdown(), SHUTDOWN_BUDGET_MS);

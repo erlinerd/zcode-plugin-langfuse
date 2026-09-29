@@ -6,6 +6,7 @@ import type { HookConfig } from "../domain/types.js";
 const DEFAULT_BASE_URL = "https://cloud.langfuse.com";
 const DEFAULT_RELEASE = "0.3.0";
 const DEFAULT_MAX_CAPTURE_CHARS = 20_000;
+const DEFAULT_MAX_MEDIA_CHARS = 4_000_000;
 
 export type StoredOption = string | number | boolean;
 export type StoredOptions = Record<string, StoredOption>;
@@ -120,6 +121,13 @@ function parsePositiveInteger(
   return Math.min(parsed, 1_000_000);
 }
 
+function parseMediaChars(value: string | undefined, fallback: number): number {
+  if (!value) return fallback;
+  const parsed = Number.parseInt(value, 10);
+  if (!Number.isFinite(parsed) || parsed < 0) return fallback;
+  return Math.min(parsed, 20_000_000);
+}
+
 function normalizeBaseUrl(value: string | undefined): string {
   const candidate = value ?? DEFAULT_BASE_URL;
   try {
@@ -196,6 +204,10 @@ export function readConfig(
         "LANGFUSE_MAX_CAPTURE_CHARS",
       ),
       DEFAULT_MAX_CAPTURE_CHARS,
+    ),
+    maxMediaChars: parseMediaChars(
+      option(env, storedOptions, "max_media_chars", "LANGFUSE_MAX_MEDIA_CHARS"),
+      DEFAULT_MAX_MEDIA_CHARS,
     ),
     debug: parseBoolean(
       option(env, storedOptions, "debug", "LANGFUSE_DEBUG"),

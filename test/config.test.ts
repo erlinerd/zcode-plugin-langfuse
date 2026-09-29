@@ -1,9 +1,4 @@
-import {
-  mkdtempSync,
-  readFileSync,
-  rmSync,
-  writeFileSync,
-} from "node:fs";
+import { mkdtempSync, readFileSync, rmSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { describe, expect, it } from "vitest";
@@ -40,6 +35,25 @@ describe("configuration", () => {
       debug: true,
     });
     expect(isConfigured(config)).toBe(true);
+  });
+
+  it("bounds media preservation by max_media_chars with disable at zero", () => {
+    expect(readConfig({}, {}).maxMediaChars).toBe(4_000_000);
+    expect(
+      readConfig({ ZCODE_USER_CONFIG_MAX_MEDIA_CHARS: "8192" }, {})
+        .maxMediaChars,
+    ).toBe(8192);
+    expect(
+      readConfig({ ZCODE_USER_CONFIG_MAX_MEDIA_CHARS: "0" }, {}).maxMediaChars,
+    ).toBe(0);
+    expect(
+      readConfig({ LANGFUSE_MAX_MEDIA_CHARS: "not-a-number" }, {})
+        .maxMediaChars,
+    ).toBe(4_000_000);
+    expect(
+      readConfig({ ZCODE_USER_CONFIG_MAX_MEDIA_CHARS: "99999999" }, {})
+        .maxMediaChars,
+    ).toBe(20_000_000);
   });
 
   it("falls back to standard Langfuse environment variables", () => {

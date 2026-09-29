@@ -70,6 +70,7 @@ const config: HookConfig = {
   captureToolInputs: true,
   captureToolOutputs: true,
   maxCaptureChars: 200,
+  maxMediaChars: 10_000,
   debug: false,
 };
 
@@ -206,7 +207,6 @@ describe("TurnTracker", () => {
       captureToolInputs: false,
       captureToolOutputs: false,
     });
-
     await tracker.handle(
       payload("UserPromptSubmit", { prompt: "private prompt" }),
     );
@@ -240,5 +240,80 @@ describe("TurnTracker", () => {
       assistantMessage: null,
       tools: [{ input: null, output: null, error: null }],
     });
+  });
+
+  it("preserves whole data-URI media past the text budget and flags hasMedia", async () => {
+    const { tracker, sink } = createTracker({ maxCaptureChars: 100 });
+    const uri = `data:image/png;base64,${"A".repeat(500)}`;
+
+    await tracker.handle(payload("UserPromptSubmit", { prompt: "look" }));
+    await tracker.handle(
+      payload("PreToolUse", {
+        tool_use_id: "tool-1",
+        tool_name: "Bash",
+        tool_input: { command: "screenshot" },
+      }),
+    );
+    await tracker.handle(
+      payload("PostToolUse", {
+        tool_use_id: "tool-1",
+        tool_name: "Bash",
+        tool_output: {
+          content: [{ type: "image", data: "A".repeat(500), mimeType: "image/png" }],
+        },
+      }),
+    );
+    await tracker.handle(
+      payload("Stop", { last_assistant_message: "done" }),
+    );
+
+    const turn = sink.turns[0];
+    const serialized = JSON.stringify(turn?.tools[0]?.output);
+    expect(serialized).toContain(uri);
+    expect(turn?.hasMedia).toBe(true);
+  });
+
+  it("replaces over-budget media with an omission marker and drops hasMedia", async () => {
+    const { tracker, sink } = createTracker({ maxMediaChars: 100 });
+    const uri = `data:image/png;base64,${"A".repeat(500)}`;
+
+    await tracker.handle(payload("UserPromptSubmit", { prompt: "look" }));
+    await tracker.handle(
+      payload("PostToolUse", {
+        tool_use_id: "tool-1",
+        tool_name: "Bash",
+        tool_output: { img: "A".repeat(500) },
+      }),
+    );
+    await tracker.handle(
+      payload("Stop", { last_assistant_message: "done" }),
+    );
+
+    const turn = sink.turns[0];
+    const serialized = JSON.stringify(turn?.tools[0]?.output);
+    expect(serialized).not.toContain(uri);
+    expect(serialized).toContain("[media image/png ~0KB omitted]");
+    expect(turn?.hasMedia).toBe(false);
+  });
+
+  it("keeps no media when media preservation is disabled", async () => {
+    const { tracker, sink } = createTracker({ maxMediaChars: 0 });
+    const uri = `data:image/png;base64,${"A".repeat(500)}`;
+
+    await tracker.handle(payload("UserPromptSubmit", { prompt: "look" }));
+    await tracker.handle(
+      payload("PostToolUse", {
+        tool_use_id: "tool-1",
+        tool_name: "Bash",
+        tool_output: { output: uri },
+      }),
+    );
+    await tracker.handle(
+      payload("Stop", { last_assistant_message: "done" }),
+    );
+
+    const turn = sink.turns[0];
+    expect(JSON.stringify(turn?.tools[0]?.output)).not.toContain(uri);
+    expect(turn?.hasMedia).toBe(false);
   });
 });

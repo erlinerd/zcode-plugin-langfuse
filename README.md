@@ -101,6 +101,7 @@ LANGFUSE_CAPTURE_PROMPTS
 LANGFUSE_CAPTURE_TOOL_INPUTS
 LANGFUSE_CAPTURE_TOOL_OUTPUTS
 LANGFUSE_MAX_CAPTURE_CHARS
+LANGFUSE_MAX_MEDIA_CHARS
 LANGFUSE_DEBUG
 ```
 
@@ -130,6 +131,18 @@ LANGFUSE_CAPTURE_TOOL_OUTPUTS=false
 Every captured field is bounded by `LANGFUSE_MAX_CAPTURE_CHARS` (default
 `20000`). Metadata-only mode still reports timing/session/tool-count structure,
 but not prompt, response, tool input, tool output, or error text.
+
+### Media capture
+
+Images delivered in hook payloads (as `image` content blocks or bare `img`/
+`image` base64 fields) are kept as whole data URIs and uploaded to Langfuse, so
+they render as pictures in the trace view instead of truncated text. Media is
+bounded by its own limit, `LANGFUSE_MAX_MEDIA_CHARS` (default `4000000`
+characters, about 3 MB per turn); anything over the limit is replaced by an
+`[media … omitted]` marker. Set it to `0` to disable media preservation and
+upload entirely. Note that media upload sends image binaries to your Langfuse
+server as a separate request; the capture flags above still decide whether the
+containing prompt or tool payload is captured at all.
 
 ## Development
 

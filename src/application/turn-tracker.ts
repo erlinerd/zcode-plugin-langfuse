@@ -9,6 +9,12 @@ import {
   toolName,
   toolOutput,
 } from "../domain/extract.js";
+import {
+  boundStringWithMedia,
+  boundValuePreservingMedia,
+  containsMedia,
+  truncateText,
+} from "../domain/media.js";
 import type {
   Clock,
   CompletedTurn,
@@ -46,47 +52,66 @@ function createTurn(
   };
 }
 
-const TRUNCATION_MARKER = "… [truncated]";
+// Payload bounds live in src/domain/media.ts: text truncates at
+// maxCaptureChars, whole data-URI media survives up to maxMediaChars.
 
-function truncate(value: string, maxChars: number): string {
-  if (value.length <= maxChars) return value;
-  if (maxChars <= TRUNCATION_MARKER.length) return value.slice(0, maxChars);
-  return `${value.slice(0, maxChars - TRUNCATION_MARKER.length)}${TRUNCATION_MARKER}`;
-}
-
-function boundedValue(value: JsonValue, maxChars: number): JsonValue {
-  const serialized = JSON.stringify(value);
-  if (serialized.length <= maxChars) return value;
-  return truncate(serialized, maxChars);
+function boundValue(
+  value: JsonValue,
+  config: HookConfig,
+): JsonValue {
+  return boundValuePreservingMedia(
+    value,
+    config.maxCaptureChars,
+    config.maxMediaChars,
+  );
 }
 
 function sanitizeTurn(turn: CompletedTurn, config: HookConfig): CompletedTurn {
-  return {
+  const sanitized: CompletedTurn = {
     ...turn,
     prompt:
       config.capturePrompts && turn.prompt !== null
-        ? truncate(turn.prompt, config.maxCaptureChars)
+        ? boundStringWithMedia(
+            turn.prompt,
+            config.maxCaptureChars,
+            config.maxMediaChars,
+          )
         : null,
     assistantMessage:
       config.capturePrompts && turn.assistantMessage !== null
-        ? truncate(turn.assistantMessage, config.maxCaptureChars)
+        ? boundStringWithMedia(
+            turn.assistantMessage,
+            config.maxCaptureChars,
+            config.maxMediaChars,
+          )
         : null,
     tools: turn.tools.map((tool) => ({
       ...tool,
-      name: truncate(tool.name, 256),
+      name: truncateText(tool.name, 256),
       input: config.captureToolInputs
-        ? boundedValue(tool.input, config.maxCaptureChars)
+        ? boundValue(tool.input, config)
         : null,
       output:
         config.captureToolOutputs && tool.output !== null
-          ? boundedValue(tool.output, config.maxCaptureChars)
+          ? boundValue(tool.output, config)
           : null,
       error:
         config.captureToolOutputs && tool.error !== null
-          ? truncate(tool.error, config.maxCaptureChars)
+          ? truncateText(tool.error, config.maxCaptureChars)
           : null,
     })),
   };
+  sanitized.hasMedia =
+    config.maxMediaChars > 0 &&
+    containsMedia({
+      prompt: sanitized.prompt,
+      assistantMessage: sanitized.assistantMessage,
+      tools: sanitized.tools.map((tool) => ({
+        input: tool.input,
+        output: tool.output,
+      })),
+    });
+  return sanitized;
 }
 
 function findTool(
@@ -138,7 +163,11 @@ export class TurnTracker {
             this.idGenerator.next(),
             now,
             this.config.capturePrompts && userPrompt !== null
-              ? truncate(userPrompt, this.config.maxCaptureChars)
+              ? boundStringWithMedia(
+                  userPrompt,
+                  this.config.maxCaptureChars,
+                  this.config.maxMediaChars,
+                )
               : null,
           );
           existing.updatedAt = now;
@@ -167,6 +196,7 @@ export class TurnTracker {
               startedAt: existing.currentTurn?.startedAt ?? now,
               endedAt: now,
               tools: existing.currentTurn?.tools ?? [],
+              hasMedia: false,
             },
             this.config,
           );
@@ -192,7 +222,7 @@ export class TurnTracker {
       id: toolId(payload) ?? this.idGenerator.next(),
       name: toolName(payload),
       input: this.config.captureToolInputs
-        ? boundedValue(toolInput(payload), this.config.maxCaptureChars)
+        ? boundValue(toolInput(payload), this.config)
         : null,
       output: null,
       error: null,
@@ -215,11 +245,11 @@ export class TurnTracker {
     const tool = findTool(turn, toolId(payload), name);
     const output =
       !failed && this.config.captureToolOutputs
-        ? boundedValue(toolOutput(payload), this.config.maxCaptureChars)
+        ? boundValue(toolOutput(payload), this.config)
         : null;
     const error =
       failed && this.config.captureToolOutputs
-        ? truncate(toolError(payload), this.config.maxCaptureChars)
+        ? truncateText(toolError(payload), this.config.maxCaptureChars)
         : null;
     if (tool) {
       tool.output = output;
