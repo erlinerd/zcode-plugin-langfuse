@@ -32,6 +32,13 @@ function diagnostics(enabled: boolean, message: string): void {
   if (enabled) process.stderr.write(`[${PLUGIN_ID}] ${message}\n`);
 }
 
+// ZCode reads exactly one JSON object from hook stdout. Library diagnostics
+// (the Langfuse logger emits debug/info through console.info) must therefore
+// land on stderr, like the plugin's own diagnostics.
+console.info = console.error;
+console.log = console.error;
+console.debug = console.error;
+
 async function main(): Promise<void> {
   const config = readConfig();
   const payload = parsePayload(await readStdin());

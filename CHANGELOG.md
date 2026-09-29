@@ -8,6 +8,25 @@ The version must stay synchronized in `package.json`,
 `.zcode-plugin/plugin.json`, `.claude-plugin/plugin.json`, and
 `marketplace.json`.
 
+## [0.3.0] — 2026-09-30
+
+- Migrated trace publishing from the legacy `langfuse` JS SDK ingestion API
+  (`/api/public/ingestion`) to the Langfuse OpenTelemetry path
+  (`@langfuse/otel` + `@langfuse/tracing` + OpenTelemetry SDK) required by
+  Langfuse v4 servers running in events-only mode.
+- Tool calls are exported as `tool` observations and the assistant response as
+  a `generation` under the `ZCode Turn` root span; prompts and responses use
+  chat-style input/output on the root observation.
+- Trace fields (name, session ID, tags, user ID) are stamped on every exported
+  span, matching the v4 events backend's per-span reading.
+- Switched the processor to immediate export mode with a bounded 8 s flush and
+  5 s shutdown budget, so a hung Langfuse network call can never exceed the
+  Stop hook timeout.
+- Disabled media upload in the processor: capture flags and
+  `max_capture_chars` remain the only privacy levers.
+- Removed the `langfuse` dependency; the runtime now bundles `@langfuse/otel`
+  5.11.1, `@langfuse/tracing` 5.11.1, and OpenTelemetry 2.x/0.222.x packages.
+
 ## [0.2.3] — 2026-09-14
 
 - Fixed Langfuse trace release metadata to follow the packaged plugin version

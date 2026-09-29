@@ -57,8 +57,11 @@ retention and deletion policy before being added.
 
 ## SDK packaging
 
-Source code imports the official `langfuse` JavaScript SDK. `esbuild` bundles
-that SDK into the sealed entry `dist/plugins/zcode-plugin-langfuse/hooks/entry.mjs`,
+Source code imports the Langfuse OpenTelemetry toolchain: `@langfuse/otel`
+(the `LangfuseSpanProcessor` that exports spans to
+`/api/public/otel/v1/traces`), `@langfuse/tracing` (typed observation
+builders), and the OpenTelemetry Node SDK. `esbuild` bundles that toolchain
+into the sealed entry `dist/plugins/zcode-plugin-langfuse/hooks/entry.mjs`,
 because ZCode plugin installation does not promise a runtime `npm install`.
 `scripts/build.mjs` stages the marketplace shell and the official-layout plugin
 directory; `.github/workflows/release.yml` zips the shell into the versioned

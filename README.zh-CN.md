@@ -5,8 +5,10 @@
 面向 ZCode 的社区 Langfuse 观测插件，按每个完成的 ZCode turn 生成一条
 Langfuse trace，目标是提交给 ZCode 官方插件市场。
 
-> 当前版本：`0.2.3`。插件遵循 **fail-open**：缺少凭据、Hook 输入损坏、本地
-> 状态错误或 Langfuse 请求失败，都不能阻塞 ZCode 会话。
+> 当前版本：`0.3.0`。插件遵循 **fail-open**：缺少凭据、Hook 输入损坏、本地
+> 状态错误或 Langfuse 请求失败，都不能阻塞 ZCode 会话。追踪通过 Langfuse 的
+> OpenTelemetry（OTLP）接入端点上报——这也是 Langfuse v4 服务端在
+> events-only 模式下唯一的接入路径。
 
 ## 采集范围
 
@@ -14,10 +16,11 @@ Langfuse trace，目标是提交给 ZCode 官方插件市场。
 `PostToolUseFailure` 和 `Stop`。在 `Stop` 时发送：
 
 - session ID；
-- 用户 prompt 与最后一条 assistant 回复（可关闭）；
-- 工具调用 Langfuse span（名称、输入、输出可分别关闭）；
-- assistant generation；
-- release、environment、turn ID 和工具数量元数据。
+- 用户 prompt 与最后一条 assistant 回复，以 chat 形式挂在 turn 根
+  observation 的 input/output 上（可关闭）；
+- 工具调用 Langfuse `tool` observation（名称、输入、输出可分别关闭）；
+- assistant 回复的 `generation`；
+- release、environment、turn ID、工具数量和插件元数据。
 
 插件**不读取 transcript 文件，也不采集隐藏完整思维链**，只使用 ZCode
 Hook stdin 传入的字段。
@@ -31,8 +34,9 @@ Hook stdin 传入的字段。
 Hook 会读取 `ZCODE_CONFIG_PATH` 指定的配置；未设置时读取
 `~/.zcode/cli/config.json` 中保存的插件选项。它只会在
 `ZCODE_PLUGIN_DATA` 或 ZCode 插件数据目录回退路径下写入有界、哈希化的 JSON
-会话状态。`Stop` 时使用本地凭据向用户配置的 Langfuse HTTPS 接口发送请求。
-不会读取 transcript 文件或隐藏推理内容。
+会话状态。`Stop` 时使用本地凭据向用户配置的 Langfuse OTLP 端点
+（`/api/public/otel/v1/traces`）发送一批 OTLP/HTTPS 请求。不会读取
+transcript 文件或隐藏推理内容。
 
 ## 配置
 
@@ -84,8 +88,12 @@ LANGFUSE_CAPTURE_TOOL_OUTPUTS=false
 
 ## 第三方软件
 
-运行时使用 `langfuse` 3.38.20、`langfuse-core` 3.38.20 和 `mustache` 4.2.0，
-均为 MIT 许可证。版本、来源和许可证见
+运行时使用 `@langfuse/otel` 5.11.1、`@langfuse/tracing` 5.11.1、
+`@langfuse/core` 5.11.1，以及 OpenTelemetry 系列包（`@opentelemetry/api`
+1.9.1、`@opentelemetry/core` 2.11.0、`@opentelemetry/sdk-trace-node` 2.11.0、
+`@opentelemetry/exporter-trace-otlp-http` 0.222.0 及其 `otlp-*` 伴生包）。
+Langfuse 系列包为 MIT 许可证，OpenTelemetry 系列包为 Apache-2.0 许可证。
+版本、来源和许可证见
 [THIRD_PARTY_NOTICES.md](THIRD_PARTY_NOTICES.md)。Langfuse 是用户选择的外部服务，
 仓库不会打包凭据。
 
@@ -125,7 +133,8 @@ npm run check
 npm run package:plugin
 ```
 
-`npm run build` 会把官方 `langfuse` JavaScript SDK 打包进本地 `dist/`。
+`npm run build` 会把 Langfuse OpenTelemetry 工具链（`@langfuse/otel`、
+`@langfuse/tracing` 与 OpenTelemetry SDK）打包进本地 `dist/`。
 `npm run build` 会构建完整的 `dist/` 输出：外层是插件市场壳，内层插件目录与
 ZCode 官方模板（`zcode-plugins-official`）布局一致：
 
@@ -151,7 +160,7 @@ dist/plugins/zcode-plugin-langfuse/
 
 - `src/domain/`：Hook 与 trace 数据类型、输入解析；
 - `src/application/`：配置与 turn 状态机；
-- `src/adapters/`：本地状态和 Langfuse SDK 适配器；
+- `src/adapters/`：本地状态和 Langfuse OTLP 适配器；
 - `src/hooks/`：很薄的进程入口和 fail-open 策略。
 
 更多设计约束见 [DESIGN.md](DESIGN.md)。

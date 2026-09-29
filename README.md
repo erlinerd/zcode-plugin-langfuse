@@ -6,9 +6,11 @@ A community ZCode plugin that sends one Langfuse trace per completed ZCode turn.
 It is designed for review and possible inclusion in the ZCode official plugin
 marketplace.
 
-> **Status:** early community contribution (`0.2.3`). The plugin is fail-open:
+> **Status:** early community contribution (`0.3.0`). The plugin is fail-open:
 > a missing credential, malformed hook payload, local state error, or Langfuse
-> request error must never block a ZCode session.
+> request error must never block a ZCode session. Tracing uses Langfuse's
+> OpenTelemetry (OTLP) ingestion endpoint, which is the only ingestion path on
+> Langfuse v4 servers running in events-only mode.
 
 ## What it records
 
@@ -24,10 +26,12 @@ The plugin listens to ZCode's process-hook events:
 At `Stop`, it emits a trace named `ZCode Turn` containing:
 
 - the ZCode session ID;
-- the user prompt and final assistant message, when prompt capture is enabled;
-- tool calls as Langfuse spans, including names and optional input/output;
-- an assistant response generation;
-- release, environment, turn ID, and tool-count metadata.
+- the user prompt and final assistant message as chat-style input/output on the
+  turn root observation, when prompt capture is enabled;
+- tool calls as Langfuse `tool` observations, including names and optional
+  input/output;
+- an assistant response `generation`;
+- release, environment, turn ID, tool-count, and plugin metadata.
 
 It does **not** read the transcript file or collect hidden chain-of-thought. It
 only uses fields delivered in the ZCode hook payload.
@@ -42,8 +46,9 @@ The hook reads `ZCODE_CONFIG_PATH`, or
 `~/.zcode/cli/config.json` when that variable is unset, to find persisted plugin
 options. It writes only bounded, hashed JSON session state under
 `ZCODE_PLUGIN_DATA`, or the ZCode plugin data directory fallback. At `Stop`,
-it sends HTTPS requests to the configured Langfuse ingestion endpoint using the
-local credentials. No transcript files or hidden reasoning are read.
+it sends one OTLP/HTTPS request batch to the configured Langfuse OTLP endpoint
+(`/api/public/otel/v1/traces`) using the local credentials. No transcript files
+or hidden reasoning are read.
 
 ## Architecture
 
@@ -55,20 +60,21 @@ ZCode hook stdin
                          │                  │
                          │                  └─ per-session, atomic, hashed filename
                          ▼
-                  LangfuseTraceSink ──► bundled official `langfuse` SDK
+                  LangfuseTraceSink ──► @langfuse/otel LangfuseSpanProcessor
                                               │
                                               ▼
-                                      Langfuse ingestion API
+                                Langfuse OTLP API (/api/public/otel/v1/traces)
 ```
 
 The source is deliberately split into deep modules:
 
 - `src/domain/` — hook and trace data types plus payload extraction;
 - `src/application/` — configuration and the turn state machine;
-- `src/adapters/` — the filesystem state adapter and Langfuse SDK adapter;
+- `src/adapters/` — the filesystem state adapter and Langfuse OTLP adapter;
 - `src/hooks/` — the small process entry point and fail-open policy.
 
-The distributable `dist/hooks/entry.mjs` bundles the official JavaScript SDK, so
+The distributable `dist/hooks/entry.mjs` bundles the Langfuse OpenTelemetry
+toolchain (`@langfuse/otel`, `@langfuse/tracing`, and the OpenTelemetry SDK), so
 an installed plugin does not need a separate `npm install` at runtime.
 
 ## Configuration
@@ -179,8 +185,12 @@ prompts.
 
 ## Third-party software
 
-The runtime uses `langfuse` 3.38.20, `langfuse-core` 3.38.20, and `mustache`
-4.2.0. Each dependency is MIT-licensed; see
+The runtime uses `@langfuse/otel` 5.11.1, `@langfuse/tracing` 5.11.1,
+`@langfuse/core` 5.11.1, and OpenTelemetry packages (`@opentelemetry/api`
+1.9.1, `@opentelemetry/core` 2.11.0, `@opentelemetry/sdk-trace-node` 2.11.0,
+`@opentelemetry/exporter-trace-otlp-http` 0.222.0 with its `otlp-*`
+companions). The Langfuse packages are MIT-licensed; the OpenTelemetry packages
+are Apache-2.0-licensed. See
 [THIRD_PARTY_NOTICES.md](THIRD_PARTY_NOTICES.md) for versions, provenance, and
 source links. Langfuse is an external service selected by the user and is not
 bundled with credentials.

@@ -1,9 +1,51 @@
-import { Langfuse } from "langfuse";
+import { LangfuseSpanProcessor, isLangfuseSpan } from "@langfuse/otel";
+import {
+  LangfuseOtelSpanAttributes,
+  setLangfuseTracerProvider,
+  startObservation,
+} from "@langfuse/tracing";
+import {
+  AlwaysOnSampler,
+  NodeTracerProvider,
+} from "@opentelemetry/sdk-trace-node";
 import { PLUGIN_ID } from "../domain/identity.js";
 import type { CompletedTurn, HookConfig, TraceSink } from "../domain/types.js";
 
-const SDK_INTEGRATION = PLUGIN_ID;
 const TRACE_NAME = "ZCode Turn";
+const BASE_TAGS = ["zcode", "zcode-hook"];
+const FLUSH_BUDGET_MS = 8_000;
+const SHUTDOWN_BUDGET_MS = 5_000;
+
+type ChatContent = { role: string; content: string };
+
+function chatInput(prompt: string | null): ChatContent | undefined {
+  return prompt === null ? undefined : { role: "user", content: prompt };
+}
+
+function chatOutput(message: string | null): ChatContent | undefined {
+  return message === null
+    ? undefined
+    : { role: "assistant", content: message };
+}
+
+/** Raced completion so a hung Langfuse network call can never exceed the Stop hook budget. */
+async function withBudget(
+  task: Promise<void>,
+  budgetMs: number,
+): Promise<void> {
+  let timer: NodeJS.Timeout | undefined;
+  try {
+    await Promise.race([
+      task,
+      new Promise<void>((resolve) => {
+        timer = setTimeout(resolve, budgetMs);
+        timer.unref?.();
+      }),
+    ]);
+  } finally {
+    clearTimeout(timer);
+  }
+}
 
 export class LangfuseTraceSink implements TraceSink {
   constructor(private readonly config: HookConfig) {}
@@ -11,76 +53,95 @@ export class LangfuseTraceSink implements TraceSink {
   async publishTurn(turn: CompletedTurn): Promise<void> {
     if (!this.config.publicKey || !this.config.secretKey) return;
 
-    const client = new Langfuse({
+    // The Langfuse v4 events backend reads trace fields per span, so every
+    // span must carry them; stamping in onStart covers observations created
+    // anywhere without a global OTel context manager.
+    const traceAttributes = {
+      [LangfuseOtelSpanAttributes.TRACE_NAME]: TRACE_NAME,
+      [LangfuseOtelSpanAttributes.TRACE_SESSION_ID]: turn.sessionId,
+      [LangfuseOtelSpanAttributes.TRACE_TAGS]: BASE_TAGS,
+      ...(this.config.userId
+        ? { [LangfuseOtelSpanAttributes.TRACE_USER_ID]: this.config.userId }
+        : {}),
+    };
+
+    const processor = new LangfuseSpanProcessor({
       publicKey: this.config.publicKey,
       secretKey: this.config.secretKey,
       baseUrl: this.config.baseUrl,
-      release: this.config.release,
       environment: this.config.environment,
-      sdkIntegration: SDK_INTEGRATION,
-      flushAt: 1,
-      fetchRetryCount: 1,
-      requestTimeout: 8_000,
+      release: this.config.release,
+      // One span batch per publishTurn in a short-lived hook process.
+      exportMode: "immediate",
+      // Capture flags and size limits above are the only privacy levers; the
+      // media upload path would add a second exfiltration route.
+      mediaUploadEnabled: false,
+      timeout: FLUSH_BUDGET_MS / 1000,
+      shouldExportSpan: ({ otelSpan }) => isLangfuseSpan(otelSpan),
     });
+    const baseOnStart = processor.onStart.bind(processor);
+    processor.onStart = (span, parentContext) => {
+      baseOnStart(span, parentContext);
+      span.setAttributes(traceAttributes);
+    };
+    // Payload bounds are enforced by the capture flags and maxCaptureChars;
+    // unlimited OTel limits keep those contracts authoritative.
+    const provider = new NodeTracerProvider({
+      spanProcessors: [processor],
+      sampler: new AlwaysOnSampler(),
+      spanLimits: {
+        attributeValueLengthLimit: Infinity,
+        attributeCountLimit: Infinity,
+      },
+    });
+    setLangfuseTracerProvider(provider);
 
     try {
-      type TraceInput = NonNullable<Parameters<Langfuse["trace"]>[0]>;
-      const traceInput: TraceInput = {
-        name: TRACE_NAME,
-        sessionId: turn.sessionId,
-        input: turn.prompt,
+      const root = startObservation(TRACE_NAME, {
+        input: chatInput(turn.prompt),
         metadata: {
           source: "zcode",
+          plugin: PLUGIN_ID,
           turnId: turn.turnId,
           toolCount: turn.tools.length,
         },
-        tags: ["zcode", "zcode-hook"],
-      };
-      if (this.config.userId) traceInput.userId = this.config.userId;
-      const trace = client.trace(traceInput);
+      }, { asType: "span", startTime: new Date(turn.startedAt) });
 
       for (const tool of turn.tools) {
-        const span = trace.span({
-          name: `tool.${tool.name}`,
+        const span = root.startObservation(`tool.${tool.name}`, {
           input: tool.input,
           metadata: {
             toolId: tool.id,
             startedAt: tool.startedAt,
             endedAt: tool.endedAt,
           },
-        });
+        }, { asType: "tool" });
         if (tool.error) {
-          span.end({
+          span.update({
             output: { error: tool.error },
             level: "ERROR",
             statusMessage: tool.error,
           });
         } else {
-          span.end({ output: tool.output });
+          span.update({ output: tool.output });
         }
+        span.end();
       }
 
-      const generation = trace.generation({
-        name: "zcode.assistant",
-        input: turn.prompt,
-        metadata: {
-          turnId: turn.turnId,
-        },
-      });
-      generation.end({ output: turn.assistantMessage });
+      const generation = root.startObservation("zcode.assistant", {
+        input: chatInput(turn.prompt),
+        output: chatOutput(turn.assistantMessage),
+        metadata: { turnId: turn.turnId },
+      }, { asType: "generation" });
+      generation.end();
 
-      trace.update({
-        output: turn.assistantMessage,
-        metadata: {
-          source: "zcode",
-          turnId: turn.turnId,
-          toolCount: turn.tools.length,
-        },
-      });
+      root.update({ output: chatOutput(turn.assistantMessage) });
+      root.end();
 
-      await client.flushAsync();
+      await withBudget(processor.forceFlush(), FLUSH_BUDGET_MS);
     } finally {
-      await client.shutdownAsync();
+      setLangfuseTracerProvider(null);
+      await withBudget(provider.shutdown(), SHUTDOWN_BUDGET_MS);
     }
   }
 }
