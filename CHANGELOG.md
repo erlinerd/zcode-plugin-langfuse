@@ -19,9 +19,10 @@ The version must stay synchronized in `package.json`,
   chat-style input/output on the root observation.
 - Trace fields (name, session ID, tags, user ID) are stamped on every exported
   span, matching the v4 events backend's per-span reading.
-- Switched the processor to immediate export mode with a bounded 8 s flush and
-  5 s shutdown budget, so a hung Langfuse network call can never exceed the
-  Stop hook timeout.
+- Switched to batched span export (one OTLP request per turn) with a bounded
+  8 s flush and 5 s shutdown budget. Immediate mode exported one request per
+  span, so tool-heavy turns overran the flush budget and silently dropped the
+  root span and generation; a 40-tool regression test pins the fix.
 - Disabled media upload in the processor: capture flags and
   `max_capture_chars` remain the only privacy levers.
 - Removed the `langfuse` dependency; the runtime now bundles `@langfuse/otel`

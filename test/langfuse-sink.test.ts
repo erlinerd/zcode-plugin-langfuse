@@ -235,4 +235,59 @@ describe("LangfuseTraceSink", () => {
       "secret-key-test",
     );
   });
+
+  it("exports a tool-heavy turn completely in one batched request", async () => {
+    const address = server.address();
+    if (!address || typeof address === "string")
+      throw new Error("test server did not bind");
+    const config: HookConfig = {
+      publicKey: "public-key-test",
+      secretKey: "secret-key-test",
+      baseUrl: `http://127.0.0.1:${address.port}`,
+      userId: null,
+      environment: "test",
+      release: "test",
+      enabled: true,
+      capturePrompts: true,
+      captureToolInputs: true,
+      captureToolOutputs: true,
+      maxCaptureChars: 200,
+      debug: false,
+    };
+    const bulkTurn: CompletedTurn = {
+      ...turn,
+      tools: Array.from({ length: 40 }, (_, index) => ({
+        id: `tool-${index}`,
+        name: `Tool${index}`,
+        input: { index },
+        output: { ok: true },
+        error: null,
+        startedAt: "2026-01-01T00:00:00.000Z",
+        endedAt: "2026-01-01T00:00:00.100Z",
+      })),
+    };
+
+    // Immediate mode exported one request per span; with a per-turn flush
+    // budget that dropped the tail (root span, generation). Batched export
+    // must deliver every span of the turn in a single request.
+    const before = requests.length;
+    await new LangfuseTraceSink(config).publishTurn(bulkTurn);
+
+    const exportRequests = requests.slice(before);
+    expect(exportRequests.length).toBe(1);
+    const spans = exportRequests.flatMap((request) => unwrapSpans(request.body));
+    expect(spans.length).toBe(42);
+    expect(spans.filter((span) => span.name === "ZCode Turn").length).toBe(1);
+    expect(spans.filter((span) => span.name === "zcode.assistant").length).toBe(
+      1,
+    );
+    expect(
+      spans.filter((span) => span.name.startsWith("tool.Tool")).length,
+    ).toBe(40);
+    const root = spans.find((span) => span.name === "ZCode Turn");
+    if (!root) throw new Error("root span missing");
+    for (const child of spans.filter((span) => span !== root)) {
+      expect(child.parentSpanId).toBe(root.spanId);
+    }
+  });
 });

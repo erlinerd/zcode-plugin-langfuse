@@ -71,8 +71,11 @@ export class LangfuseTraceSink implements TraceSink {
       baseUrl: this.config.baseUrl,
       environment: this.config.environment,
       release: this.config.release,
-      // One span batch per publishTurn in a short-lived hook process.
-      exportMode: "immediate",
+      // Default batched mode plus the explicit forceFlush below collapses the
+      // whole turn into one OTLP request. Immediate mode exports spans one
+      // request at a time; a tool-heavy turn then overruns the flush budget
+      // and silently drops the tail (root span and generation).
+      exportMode: "batched",
       // Capture flags and size limits above are the only privacy levers; the
       // media upload path would add a second exfiltration route.
       mediaUploadEnabled: false,
