@@ -29,7 +29,7 @@
     "lint-staged": "^17.5.1",
     "oxlint": "^1.82.0",
     "typescript": "^7.0.2",
-    "vitest": "^5.0.0"
+    "vitest": "^5.0.2"
   },
   "dependencies": {
     "@langfuse/otel": "^5.11.1",
