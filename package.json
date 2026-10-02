@@ -23,7 +23,7 @@
     "prepare": "husky && npm run build"
   },
   "devDependencies": {
-    "@types/node": "^26.4.1",
+    "@types/node": "^26.6.2",
     "esbuild": "^0.28.2",
     "husky": "^9.1.7",
     "lint-staged": "^17.5.1",
