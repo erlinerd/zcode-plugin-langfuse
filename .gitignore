@@ -68,3 +68,8 @@ test-results/
 dist/
 /*.zip
 /*.zip.sha256
+
+# Local tool runtime state (pi / vitest / video agent scratch)
+.pi/
+.vitest/
+.video_agent/
